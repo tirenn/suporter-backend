@@ -108,15 +108,18 @@ func main() {
 	// Repositories
 	userRepo := repository.NewUserRepository(gormDB)
 	projectRepo := repository.NewProjectRepository(gormDB)
+	donationRepo := repository.NewDonationRepository(gormDB)
 
 	// Services
 	authService := service.NewAuthService(userRepo, cfg)
 	projectService := service.NewProjectService(projectRepo, cfg)
 	sseBroker := service.NewSSEBroker()
+	donationService := service.NewDonationService(donationRepo, userRepo, projectRepo, sseBroker)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	projectHandler := handler.NewProjectHandler(projectService, sseBroker)
+	donationHandler := handler.NewDonationHandler(donationService)
 
 	staticDir := "./static"
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
@@ -142,6 +145,9 @@ func main() {
 	// Swagger API Docs Route
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Public Webhook (No JWT validation, verified via streamer webhook key)
+	r.POST("/api/v1/webhooks/donation", donationHandler.VerifyWebhookDonation)
+
 	// Public Auth Endpoints
 	api := r.Group("/api/v1")
 	{
@@ -151,22 +157,26 @@ func main() {
 			authGroup.POST("/login", authHandler.Login)
 		}
 
-		// Protected Project & Template Routes
-		protectedProjects := api.Group("/projects")
-		protectedProjects.Use(middleware.AuthMiddleware(authService))
+		// Protected Routes (Requires JWT Token)
+		protected := api.Group("")
+		protected.Use(middleware.AuthMiddleware(authService))
 		{
-			protectedProjects.POST("", projectHandler.CreateProject)
-			protectedProjects.GET("", projectHandler.GetProjects)
-			protectedProjects.PUT("/:uuid", projectHandler.UpdateProject)
-			protectedProjects.DELETE("/:uuid", projectHandler.DeleteProject)
+			// Projects Management
+			protected.POST("/projects", projectHandler.CreateProject)
+			protected.GET("/projects", projectHandler.GetProjects)
+			protected.PUT("/projects/:uuid", projectHandler.UpdateProject)
+			protected.DELETE("/projects/:uuid", projectHandler.DeleteProject)
+			protected.POST("/projects/:uuid/alert", projectHandler.TriggerProjectAlert)
+
+			// Viewer Donation Trigger
+			protected.POST("/donations", donationHandler.CreateDonation)
 		}
 
-		// Public Project & Overlay Trigger Route
+		// Public Project Route
 		api.GET("/projects/:uuid", projectHandler.GetProjectByUUID)
-		api.POST("/projects/:uuid/alert", projectHandler.TriggerProjectAlert)
 	}
 
-	// OBS Overlay Routes
+	// OBS Overlay Routes (Public Browser Source Widget)
 	r.GET("/overlay/:uuid", overlayHandler.ServeOverlay)
 	r.GET("/overlay/:uuid/stream", overlayHandler.ServeSSEStream)
 
@@ -197,16 +207,13 @@ func main() {
 
 	go func() {
 		log.Println("==================================================================")
-		log.Println("  🚀 SUPORTER BACKEND (1 Project = 1 OBS Template Architecture)  ")
+		log.Println("  🚀 SUPORTER BACKEND (Multi-Role Streamer/Viewer Enabled)        ")
 		log.Println("==================================================================")
 		log.Printf(" > Swagger API Docs      : http://localhost:%s/swagger/index.html", cfg.Port)
 		log.Printf(" > Dashboard Web UI      : http://localhost:%s/dashboard", cfg.Port)
 		log.Printf(" > Register Endpoint     : POST http://localhost:%s/api/v1/auth/register", cfg.Port)
 		log.Printf(" > Login Endpoint        : POST http://localhost:%s/api/v1/auth/login", cfg.Port)
-		log.Printf(" > Create Project        : POST http://localhost:%s/api/v1/projects", cfg.Port)
-		log.Printf(" > Update Project        : PUT http://localhost:%s/api/v1/projects/{uuid}", cfg.Port)
-		log.Printf(" > OBS Overlay Pattern   : http://localhost:%s/overlay/{project_uuid}", cfg.Port)
-		log.Printf(" > Trigger Alert Pattern : POST http://localhost:%s/api/v1/projects/{project_uuid}/alert", cfg.Port)
+		log.Printf(" > Webhook callback URL  : POST http://localhost:%s/api/v1/webhooks/donation?key={streamer_key}", cfg.Port)
 		log.Println("==================================================================")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

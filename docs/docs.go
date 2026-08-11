@@ -25,7 +25,7 @@ const docTemplate = `{
     "paths": {
         "/api/v1/auth/login": {
             "post": {
-                "description": "Authenticate email \u0026 password, returns JWT token.",
+                "description": "Authenticate username \u0026 password, returns JWT token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -35,7 +35,7 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Login user account",
+                "summary": "Login user account (Requires Username)",
                 "parameters": [
                     {
                         "description": "User Credentials",
@@ -55,7 +55,7 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Invalid email or password",
+                        "description": "Invalid username or password",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -68,7 +68,7 @@ const docTemplate = `{
         },
         "/api/v1/auth/register": {
             "post": {
-                "description": "Register user with name, email, and password. Returns JWT token.",
+                "description": "Register user with name, username, and password. Returns JWT token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -78,7 +78,7 @@ const docTemplate = `{
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Register a new user account",
+                "summary": "Register a new user account (Requires Username)",
                 "parameters": [
                     {
                         "description": "User Registration Details",
@@ -107,7 +107,7 @@ const docTemplate = `{
                         }
                     },
                     "409": {
-                        "description": "Email already exists",
+                        "description": "Username already exists",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -336,7 +336,12 @@ const docTemplate = `{
         },
         "/api/v1/projects/{uuid}/alert": {
             "post": {
-                "description": "Send required donation variables (name, amount, message) to pop up on OBS Studio overlay in real-time.",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Send required donation variables (name, amount, message) to pop up on OBS Studio overlay. Requires JWT authentication via Authorization Bearer header.",
                 "consumes": [
                     "application/json"
                 ],
@@ -346,7 +351,7 @@ const docTemplate = `{
                 "tags": [
                     "Projects"
                 ],
-                "summary": "Trigger donation alert to project OBS overlay",
+                "summary": "Trigger donation alert to project OBS overlay (Requires JWT Bearer Token)",
                 "parameters": [
                     {
                         "type": "string",
@@ -373,8 +378,8 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Unauthorized - Missing or Invalid JWT Token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -726,7 +731,7 @@ const docTemplate = `{
                 },
                 "duration": {
                     "type": "integer",
-                    "example": 5000
+                    "example": 7000
                 },
                 "html_template": {
                     "type": "string"
@@ -797,17 +802,17 @@ const docTemplate = `{
         "domain.LoginRequest": {
             "type": "object",
             "required": [
-                "email",
-                "password"
+                "password",
+                "username"
             ],
             "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
                 "password": {
                     "type": "string",
                     "example": "secret123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "johndoe"
                 }
             }
         },
@@ -826,7 +831,7 @@ const docTemplate = `{
                 },
                 "duration": {
                     "type": "integer",
-                    "example": 5000
+                    "example": 7000
                 },
                 "event_type": {
                     "type": "string",
@@ -867,15 +872,11 @@ const docTemplate = `{
         "domain.RegisterRequest": {
             "type": "object",
             "required": [
-                "email",
                 "name",
-                "password"
+                "password",
+                "username"
             ],
             "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
                 "name": {
                     "type": "string",
                     "example": "John Doe"
@@ -884,6 +885,12 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 6,
                     "example": "secret123"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "johndoe"
                 }
             }
         },
@@ -948,7 +955,7 @@ const docTemplate = `{
                 },
                 "duration": {
                     "type": "integer",
-                    "example": 5000
+                    "example": 7000
                 },
                 "message": {
                     "type": "string",
@@ -1004,10 +1011,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
                 "id": {
                     "type": "integer",
                     "example": 1
@@ -1018,6 +1021,10 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "johndoe"
                 }
             }
         }

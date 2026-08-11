@@ -19,7 +19,7 @@
     "paths": {
         "/api/v1/auth/login": {
             "post": {
-                "description": "Authenticate email \u0026 password, returns JWT token.",
+                "description": "Authenticate username \u0026 password, returns JWT token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -29,7 +29,7 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Login user account",
+                "summary": "Login user account (Requires Username)",
                 "parameters": [
                     {
                         "description": "User Credentials",
@@ -49,7 +49,7 @@
                         }
                     },
                     "401": {
-                        "description": "Invalid email or password",
+                        "description": "Invalid username or password",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -62,7 +62,7 @@
         },
         "/api/v1/auth/register": {
             "post": {
-                "description": "Register user with name, email, and password. Returns JWT token.",
+                "description": "Register user with name, username, and password. Returns JWT token.",
                 "consumes": [
                     "application/json"
                 ],
@@ -72,7 +72,7 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Register a new user account",
+                "summary": "Register a new user account (Requires Username)",
                 "parameters": [
                     {
                         "description": "User Registration Details",
@@ -101,7 +101,7 @@
                         }
                     },
                     "409": {
-                        "description": "Email already exists",
+                        "description": "Username already exists",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -330,7 +330,12 @@
         },
         "/api/v1/projects/{uuid}/alert": {
             "post": {
-                "description": "Send required donation variables (name, amount, message) to pop up on OBS Studio overlay in real-time.",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Send required donation variables (name, amount, message) to pop up on OBS Studio overlay. Requires JWT authentication via Authorization Bearer header.",
                 "consumes": [
                     "application/json"
                 ],
@@ -340,7 +345,7 @@
                 "tags": [
                     "Projects"
                 ],
-                "summary": "Trigger donation alert to project OBS overlay",
+                "summary": "Trigger donation alert to project OBS overlay (Requires JWT Bearer Token)",
                 "parameters": [
                     {
                         "type": "string",
@@ -367,8 +372,8 @@
                             "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Unauthorized - Missing or Invalid JWT Token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -720,7 +725,7 @@
                 },
                 "duration": {
                     "type": "integer",
-                    "example": 5000
+                    "example": 7000
                 },
                 "html_template": {
                     "type": "string"
@@ -791,17 +796,17 @@
         "domain.LoginRequest": {
             "type": "object",
             "required": [
-                "email",
-                "password"
+                "password",
+                "username"
             ],
             "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
                 "password": {
                     "type": "string",
                     "example": "secret123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "johndoe"
                 }
             }
         },
@@ -820,7 +825,7 @@
                 },
                 "duration": {
                     "type": "integer",
-                    "example": 5000
+                    "example": 7000
                 },
                 "event_type": {
                     "type": "string",
@@ -861,15 +866,11 @@
         "domain.RegisterRequest": {
             "type": "object",
             "required": [
-                "email",
                 "name",
-                "password"
+                "password",
+                "username"
             ],
             "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
                 "name": {
                     "type": "string",
                     "example": "John Doe"
@@ -878,6 +879,12 @@
                     "type": "string",
                     "minLength": 6,
                     "example": "secret123"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "johndoe"
                 }
             }
         },
@@ -942,7 +949,7 @@
                 },
                 "duration": {
                     "type": "integer",
-                    "example": 5000
+                    "example": 7000
                 },
                 "message": {
                     "type": "string",
@@ -998,10 +1005,6 @@
                 "created_at": {
                     "type": "string"
                 },
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
                 "id": {
                     "type": "integer",
                     "example": 1
@@ -1012,6 +1015,10 @@
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "johndoe"
                 }
             }
         }

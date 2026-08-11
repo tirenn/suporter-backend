@@ -16,7 +16,7 @@ definitions:
         example: Overlay for my gaming channel
         type: string
       duration:
-        example: 5000
+        example: 7000
         type: integer
       html_template:
         type: string
@@ -71,15 +71,15 @@ definitions:
     - EventTypeCustom
   domain.LoginRequest:
     properties:
-      email:
-        example: user@example.com
-        type: string
       password:
         example: secret123
         type: string
+      username:
+        example: johndoe
+        type: string
     required:
-    - email
     - password
+    - username
     type: object
   domain.Project:
     properties:
@@ -91,7 +91,7 @@ definitions:
         example: Superchat donation alert overlay
         type: string
       duration:
-        example: 5000
+        example: 7000
         type: integer
       event_type:
         example: donation
@@ -121,9 +121,6 @@ definitions:
     type: object
   domain.RegisterRequest:
     properties:
-      email:
-        example: user@example.com
-        type: string
       name:
         example: John Doe
         type: string
@@ -131,10 +128,15 @@ definitions:
         example: secret123
         minLength: 6
         type: string
+      username:
+        example: johndoe
+        maxLength: 50
+        minLength: 3
+        type: string
     required:
-    - email
     - name
     - password
+    - username
     type: object
   domain.Template:
     properties:
@@ -174,7 +176,7 @@ definitions:
         example: $50.00
         type: string
       duration:
-        example: 5000
+        example: 7000
         type: integer
       message:
         example: Keep up the awesome stream!
@@ -216,9 +218,6 @@ definitions:
     properties:
       created_at:
         type: string
-      email:
-        example: user@example.com
-        type: string
       id:
         example: 1
         type: integer
@@ -226,6 +225,9 @@ definitions:
         example: John Doe
         type: string
       updated_at:
+        type: string
+      username:
+        example: johndoe
         type: string
     type: object
 host: localhost:8080
@@ -246,7 +248,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate email & password, returns JWT token.
+      description: Authenticate username & password, returns JWT token.
       parameters:
       - description: User Credentials
         in: body
@@ -262,19 +264,19 @@ paths:
           schema:
             $ref: '#/definitions/domain.AuthResponse'
         "401":
-          description: Invalid email or password
+          description: Invalid username or password
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Login user account
+      summary: Login user account (Requires Username)
       tags:
       - Authentication
   /api/v1/auth/register:
     post:
       consumes:
       - application/json
-      description: Register user with name, email, and password. Returns JWT token.
+      description: Register user with name, username, and password. Returns JWT token.
       parameters:
       - description: User Registration Details
         in: body
@@ -296,12 +298,12 @@ paths:
               type: string
             type: object
         "409":
-          description: Email already exists
+          description: Username already exists
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Register a new user account
+      summary: Register a new user account (Requires Username)
       tags:
       - Authentication
   /api/v1/projects:
@@ -450,7 +452,8 @@ paths:
       consumes:
       - application/json
       description: Send required donation variables (name, amount, message) to pop
-        up on OBS Studio overlay in real-time.
+        up on OBS Studio overlay. Requires JWT authentication via Authorization Bearer
+        header.
       parameters:
       - description: Project UUID
         in: path
@@ -471,8 +474,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "400":
-          description: Bad Request
+        "401":
+          description: Unauthorized - Missing or Invalid JWT Token
           schema:
             additionalProperties:
               type: string
@@ -483,7 +486,10 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Trigger donation alert to project OBS overlay
+      security:
+      - BearerAuth: []
+      summary: Trigger donation alert to project OBS overlay (Requires JWT Bearer
+        Token)
       tags:
       - Projects
   /api/v1/projects/{uuid}/templates:

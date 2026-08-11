@@ -9,7 +9,7 @@ import (
 )
 
 const UserIDKey = "user_id"
-const UserEmailKey = "user_email"
+const UserUsernameKey = "user_username"
 
 func AuthMiddleware(authService service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -28,7 +28,7 @@ func AuthMiddleware(authService service.AuthService) gin.HandlerFunc {
 		}
 
 		c.Set(UserIDKey, claims.UserID)
-		c.Set(UserEmailKey, claims.Email)
+		c.Set(UserUsernameKey, claims.Username)
 
 		c.Next()
 	}

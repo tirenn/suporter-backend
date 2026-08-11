@@ -16,7 +16,7 @@ type Project struct {
 	HTMLTemplate string    `gorm:"not null;type:text" json:"html_template"`
 	CSSStyle     string    `gorm:"type:text" json:"css_style,omitempty"`
 	Fields       string    `gorm:"not null;type:text" json:"fields" example:"[\"name\",\"amount\",\"message\"]"`
-	Duration     int       `gorm:"default:5000" json:"duration" example:"5000"`
+	Duration     int       `gorm:"default:7000" json:"duration" example:"7000"`
 	OBSUrl       string    `gorm:"-" json:"obs_url" example:"http://localhost:8080/overlay/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3d0001"`
 	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`
@@ -27,7 +27,7 @@ type CreateProjectRequest struct {
 	Description  string `json:"description,omitempty" example:"Overlay for my gaming channel"`
 	HTMLTemplate string `json:"html_template,omitempty"`
 	CSSStyle     string `json:"css_style,omitempty"`
-	Duration     int    `json:"duration,omitempty" example:"5000"`
+	Duration     int    `json:"duration,omitempty" example:"7000"`
 }
 
 type UpdateProjectRequest struct {
@@ -42,5 +42,5 @@ type TriggerAlertRequest struct {
 	Name     string `json:"name" example:"Alex" binding:"required"`
 	Amount   string `json:"amount" example:"$50.00" binding:"required"`
 	Message  string `json:"message" example:"Keep up the awesome stream!" binding:"required"`
-	Duration int    `json:"duration,omitempty" example:"5000"`
+	Duration int    `json:"duration,omitempty" example:"7000"`
 }

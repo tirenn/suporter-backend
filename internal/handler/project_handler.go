@@ -174,18 +174,25 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 }
 
 // TriggerProjectAlert godoc
-// @Summary Trigger donation alert to project OBS overlay
-// @Description Send required donation variables (name, amount, message) to pop up on OBS Studio overlay in real-time.
+// @Summary Trigger donation alert to project OBS overlay (Requires JWT Bearer Token)
+// @Description Send required donation variables (name, amount, message) to pop up on OBS Studio overlay. Requires JWT authentication via Authorization Bearer header.
 // @Tags Projects
+// @Security BearerAuth
 // @Accept json
 // @Produce json
 // @Param uuid path string true "Project UUID"
 // @Param request body domain.TriggerAlertRequest true "Donation Alert Payload"
 // @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string "Unauthorized - Missing or Invalid JWT Token"
 // @Failure 404 {object} map[string]string "Project Not Found"
 // @Router /api/v1/projects/{uuid}/alert [post]
 func (h *ProjectHandler) TriggerProjectAlert(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok || userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: JWT token required"})
+		return
+	}
+
 	projectUUID := c.Param("uuid")
 	if projectUUID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Project UUID required"})

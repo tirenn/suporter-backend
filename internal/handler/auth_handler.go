@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"suporter-backend/internal/domain"
-	"suporter-backend/internal/repository"
 	"suporter-backend/internal/service"
 )
 
@@ -20,15 +18,15 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 }
 
 // Register godoc
-// @Summary Register a new user account
-// @Description Register user with name, email, and password. Returns JWT token.
+// @Summary Register a new user account (Requires Username)
+// @Description Register user with name, username, and password. Returns JWT token.
 // @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body domain.RegisterRequest true "User Registration Details"
 // @Success 201 {object} domain.AuthResponse
 // @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 409 {object} map[string]string "Email already exists"
+// @Failure 409 {object} map[string]string "Username already exists"
 // @Router /api/v1/auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req domain.RegisterRequest
@@ -39,10 +37,6 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	resp, err := h.authService.Register(c.Request.Context(), req)
 	if err != nil {
-		if errors.Is(err, repository.ErrEmailAlreadyExists) {
-			c.JSON(http.StatusConflict, gin.H{"error": "Email is already registered"})
-			return
-		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -51,14 +45,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 }
 
 // Login godoc
-// @Summary Login user account
-// @Description Authenticate email & password, returns JWT token.
+// @Summary Login user account (Requires Username)
+// @Description Authenticate username & password, returns JWT token.
 // @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param request body domain.LoginRequest true "User Credentials"
 // @Success 200 {object} domain.AuthResponse
-// @Failure 401 {object} map[string]string "Invalid email or password"
+// @Failure 401 {object} map[string]string "Invalid username or password"
 // @Router /api/v1/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req domain.LoginRequest
@@ -69,11 +63,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	resp, err := h.authService.Login(c.Request.Context(), req)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidCredentials) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
