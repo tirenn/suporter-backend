@@ -46,10 +46,17 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 		log.Printf("[Goose Migration Warning] %v", err)
 	}
 
-	// Ensure projects.uuid column capacity is VARCHAR(36) for clean uuid.UUID
-	_, _ = stdDB.Exec("ALTER TABLE projects ALTER COLUMN uuid TYPE VARCHAR(36);")
-
 	return gormDB, nil
+}
+
+func DropAllTables(db *sql.DB) error {
+	log.Println("[DB Reset] Dropping all database tables (goose_db_version, templates, alerts, projects, users)...")
+	_, err := db.Exec("DROP TABLE IF EXISTS goose_db_version, templates, alerts, projects, users CASCADE;")
+	if err != nil {
+		return fmt.Errorf("failed to drop tables: %w", err)
+	}
+	log.Println("[DB Reset] Database tables dropped cleanly.")
+	return nil
 }
 
 func ensureDatabaseExists(cfg *config.Config) error {
@@ -91,13 +98,11 @@ func RunGooseMigrations(db *sql.DB, migrationsDir string) error {
 
 	log.Printf("[Goose] Running database migrations from '%s'...", dir)
 	if err := goose.Up(db, dir); err != nil {
-		if strings.Contains(err.Error(), "42804") || strings.Contains(err.Error(), "foreign key constraint") {
-			log.Println("[Goose Reset] Legacy schema type mismatch detected. Resetting tables for new Goose schema...")
-			_, _ = db.Exec("DROP TABLE IF EXISTS goose_db_version, alerts, projects, users CASCADE;")
-			if err2 := goose.Up(db, dir); err2 == nil {
-				log.Println("[Goose] Clean schema rebuild succeeded.")
-				return nil
-			}
+		log.Println("[Goose Reset] Schema mismatch detected. Resetting database tables for new migration sequence...")
+		_ = DropAllTables(db)
+		if err2 := goose.Up(db, dir); err2 == nil {
+			log.Println("[Goose] Clean schema rebuild succeeded.")
+			return nil
 		}
 		return fmt.Errorf("goose up migration failed: %w", err)
 	}

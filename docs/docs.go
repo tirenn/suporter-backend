@@ -125,7 +125,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get user projects with generated OBS Stream URLs.",
+                "description": "Get user projects with generated OBS Stream URLs and template details.",
                 "produces": [
                     "application/json"
                 ],
@@ -158,7 +158,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create project with name and description. Generates unique Project UUID v4 \u0026 OBS Stream URL.",
+                "description": "Create project with name, description, and overlay template HTML/CSS. Generates unique Project UUID v4 \u0026 OBS Stream URL.",
                 "consumes": [
                     "application/json"
                 ],
@@ -168,10 +168,10 @@ const docTemplate = `{
                 "tags": [
                     "Projects"
                 ],
-                "summary": "Create a new project",
+                "summary": "Create a new project with donation overlay template",
                 "parameters": [
                     {
-                        "description": "Project Info",
+                        "description": "Project Info \u0026 Template",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -201,12 +201,7 @@ const docTemplate = `{
         },
         "/api/v1/projects/{uuid}": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve single project details with OBS Stream URL.",
+                "description": "Retrieve single project details with OBS Stream URL \u0026 template HTML/CSS.",
                 "produces": [
                     "application/json"
                 ],
@@ -240,11 +235,14 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/api/v1/projects/{uuid}/alert": {
-            "post": {
-                "description": "Send name and message to pop up on OBS Studio overlay in real-time.",
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update project name, description, html_template, css_style, or duration.",
                 "consumes": [
                     "application/json"
                 ],
@@ -254,7 +252,7 @@ const docTemplate = `{
                 "tags": [
                     "Projects"
                 ],
-                "summary": "Trigger alert to project OBS overlay",
+                "summary": "Update project overlay template",
                 "parameters": [
                     {
                         "type": "string",
@@ -264,12 +262,106 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Alert Payload",
+                        "description": "Updated Project Template Info",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.AlertRequest"
+                            "$ref": "#/definitions/domain.UpdateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Project"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete project by UUID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Delete project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{uuid}/alert": {
+            "post": {
+                "description": "Send required donation variables (name, amount, message) to pop up on OBS Studio overlay in real-time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Trigger donation alert to project OBS overlay",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Donation Alert Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.TriggerAlertRequest"
                         }
                     }
                 ],
@@ -279,6 +371,15 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "404": {
@@ -292,34 +393,312 @@ const docTemplate = `{
                     }
                 }
             }
-        }
-    },
-    "definitions": {
-        "domain.AlertRequest": {
-            "type": "object",
-            "required": [
-                "message",
-                "name"
-            ],
-            "properties": {
-                "duration": {
-                    "type": "integer",
-                    "example": 5000
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Awesome stream! Thanks for playing!"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Alex"
-                },
-                "type": {
-                    "type": "string",
-                    "example": "donation"
+        },
+        "/api/v1/projects/{uuid}/templates": {
+            "get": {
+                "description": "Retrieve custom alert templates configured for a project.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "List custom overlay templates for a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add a custom alert template with HTML, CSS, and dynamic variables (e.g. {{name}}, {{amount}}, {{description}}).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Create custom overlay template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Template Definition",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Template"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
                 }
             }
         },
+        "/api/v1/projects/{uuid}/templates/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Get custom template details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Template ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Template"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Update custom overlay template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Template ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated Template",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Template"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Delete custom overlay template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Template ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{uuid}/templates/{id}/trigger": {
+            "post": {
+                "description": "Send dynamic key-value payload (e.g. name, amount, description) to pop up on OBS Studio overlay using custom template HTML/CSS.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Templates"
+                ],
+                "summary": "Trigger live alert using custom overlay template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Template ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dynamic Key-Value Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.TriggerCustomAlertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
         "domain.AuthResponse": {
             "type": "object",
             "properties": {
@@ -338,15 +717,82 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
+                "css_style": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string",
                     "example": "Overlay for my gaming channel"
+                },
+                "duration": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "html_template": {
+                    "type": "string"
                 },
                 "name": {
                     "type": "string",
                     "example": "My Stream Project"
                 }
             }
+        },
+        "domain.CreateTemplateRequest": {
+            "type": "object",
+            "required": [
+                "event_type",
+                "html_template",
+                "name"
+            ],
+            "properties": {
+                "css_style": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "event_type": {
+                    "type": "string",
+                    "example": "donation"
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"name\"",
+                        "\"amount\"",
+                        "\"description\"]"
+                    ]
+                },
+                "html_template": {
+                    "type": "string",
+                    "example": "\u003ch1\u003e{{name}} donated {{amount}}\u003c/h1\u003e\u003cp\u003e{{description}}\u003c/p\u003e"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "New Donation Alert"
+                }
+            }
+        },
+        "domain.EventType": {
+            "type": "string",
+            "enum": [
+                "donation",
+                "subscriber",
+                "follower",
+                "cheer",
+                "custom"
+            ],
+            "x-enum-varnames": [
+                "EventTypeDonation",
+                "EventTypeSubscriber",
+                "EventTypeFollower",
+                "EventTypeCheer",
+                "EventTypeCustom"
+            ]
         },
         "domain.LoginRequest": {
             "type": "object",
@@ -371,9 +817,27 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "css_style": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string",
-                    "example": "Stream overlay for YouTube"
+                    "example": "Superchat donation alert overlay"
+                },
+                "duration": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "event_type": {
+                    "type": "string",
+                    "example": "donation"
+                },
+                "fields": {
+                    "type": "string",
+                    "example": "[\"name\",\"amount\",\"message\"]"
+                },
+                "html_template": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer",
@@ -381,7 +845,7 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string",
-                    "example": "Main Stream"
+                    "example": "Main Stream Overlay"
                 },
                 "obs_url": {
                     "type": "string",
@@ -420,6 +884,117 @@ const docTemplate = `{
                     "type": "string",
                     "minLength": 6,
                     "example": "secret123"
+                }
+            }
+        },
+        "domain.Template": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "css_style": {
+                    "type": "string",
+                    "example": ".alert { background: gold; color: black; }"
+                },
+                "duration": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "event_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.EventType"
+                        }
+                    ],
+                    "example": "donation"
+                },
+                "fields": {
+                    "type": "string",
+                    "example": "[\"name\",\"amount\",\"description\"]"
+                },
+                "html_template": {
+                    "type": "string",
+                    "example": "\u003cdiv class='alert'\u003e\u003ch1\u003e{{name}} donated {{amount}}\u003c/h1\u003e\u003cp\u003e{{description}}\u003c/p\u003e\u003c/div\u003e"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "New Donation Alert"
+                },
+                "project_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.TriggerAlertRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "message",
+                "name"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "string",
+                    "example": "$50.00"
+                },
+                "duration": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Keep up the awesome stream!"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Alex"
+                }
+            }
+        },
+        "domain.TriggerCustomAlertRequest": {
+            "type": "object",
+            "required": [
+                "payload"
+            ],
+            "properties": {
+                "duration": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "payload": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "domain.UpdateProjectRequest": {
+            "type": "object",
+            "properties": {
+                "css_style": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "type": "integer"
+                },
+                "html_template": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

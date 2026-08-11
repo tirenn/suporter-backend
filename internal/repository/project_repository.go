@@ -16,6 +16,8 @@ type ProjectRepository interface {
 	Create(ctx context.Context, project *domain.Project) error
 	FindByUUID(ctx context.Context, uuid string) (*domain.Project, error)
 	FindByUserID(ctx context.Context, userID uint64) ([]*domain.Project, error)
+	Update(ctx context.Context, project *domain.Project) error
+	Delete(ctx context.Context, uuid string) error
 }
 
 type gormProjectRepository struct {
@@ -53,4 +55,20 @@ func (r *gormProjectRepository) FindByUserID(ctx context.Context, userID uint64)
 		return nil, fmt.Errorf("error finding projects by user_id: %w", err)
 	}
 	return projects, nil
+}
+
+func (r *gormProjectRepository) Update(ctx context.Context, p *domain.Project) error {
+	err := r.db.WithContext(ctx).Save(p).Error
+	if err != nil {
+		return fmt.Errorf("error updating project: %w", err)
+	}
+	return nil
+}
+
+func (r *gormProjectRepository) Delete(ctx context.Context, uuid string) error {
+	err := r.db.WithContext(ctx).Where("uuid = ?", uuid).Delete(&domain.Project{}).Error
+	if err != nil {
+		return fmt.Errorf("error deleting project: %w", err)
+	}
+	return nil
 }

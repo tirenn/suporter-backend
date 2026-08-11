@@ -56,6 +56,10 @@ migrate-down:
 	@echo "Running Goose migrations DOWN..."
 	@go run $(MAIN_FILE) -migrate-down
 
+migrate-reset:
+	@echo "Resetting database and running Goose migrations from scratch..."
+	@go run $(MAIN_FILE) -migrate-reset
+
 migrate-create:
 	@echo "Creating Goose SQL migration file..."
 	@go run $(MAIN_FILE) -migrate-create="$(name)"

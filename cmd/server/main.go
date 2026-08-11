@@ -46,6 +46,8 @@ func main() {
 	migrateUpFlag := flag.Bool("migrate-up", false, "Run database migrations UP and exit")
 	migrateDownFlag := flag.Bool("migrate-down", false, "Run database migrations DOWN and exit")
 	migrateCreateFlag := flag.String("migrate-create", "", "Create a new Goose SQL migration file (e.g. -migrate-create=add_roles_table)")
+	dropDBFlag := flag.Bool("drop-db", false, "Drop all database tables and exit")
+	migrateResetFlag := flag.Bool("migrate-reset", false, "Drop all database tables and re-run all Goose migrations from scratch")
 	flag.Parse()
 
 	if *migrateCreateFlag != "" {
@@ -66,6 +68,25 @@ func main() {
 	stdDB, err := gormDB.DB()
 	if err != nil {
 		log.Fatalf("Failed to retrieve sql.DB: %v", err)
+	}
+
+	if *dropDBFlag {
+		log.Println("[CLI] Dropping all database tables...")
+		if err := database.DropAllTables(stdDB); err != nil {
+			log.Fatalf("Drop database tables failed: %v", err)
+		}
+		os.Exit(0)
+	}
+
+	if *migrateResetFlag {
+		log.Println("[CLI] Resetting database and re-running all Goose migrations from scratch...")
+		if err := database.DropAllTables(stdDB); err != nil {
+			log.Fatalf("Drop database tables failed: %v", err)
+		}
+		if err := database.RunGooseMigrations(stdDB, "migrations"); err != nil {
+			log.Fatalf("Goose migration UP failed: %v", err)
+		}
+		os.Exit(0)
 	}
 
 	if *migrateUpFlag {
@@ -130,16 +151,18 @@ func main() {
 			authGroup.POST("/login", authHandler.Login)
 		}
 
-		// Protected Project Routes
+		// Protected Project & Template Routes
 		protectedProjects := api.Group("/projects")
 		protectedProjects.Use(middleware.AuthMiddleware(authService))
 		{
 			protectedProjects.POST("", projectHandler.CreateProject)
 			protectedProjects.GET("", projectHandler.GetProjects)
-			protectedProjects.GET("/:uuid", projectHandler.GetProjectByUUID)
+			protectedProjects.PUT("/:uuid", projectHandler.UpdateProject)
+			protectedProjects.DELETE("/:uuid", projectHandler.DeleteProject)
 		}
 
-		// Public Alert Trigger Route
+		// Public Project & Overlay Trigger Route
+		api.GET("/projects/:uuid", projectHandler.GetProjectByUUID)
 		api.POST("/projects/:uuid/alert", projectHandler.TriggerProjectAlert)
 	}
 
@@ -174,13 +197,14 @@ func main() {
 
 	go func() {
 		log.Println("==================================================================")
-		log.Println("  🚀 SUPORTER BACKEND (Auto-Increment ID & API UUID v4)          ")
+		log.Println("  🚀 SUPORTER BACKEND (1 Project = 1 OBS Template Architecture)  ")
 		log.Println("==================================================================")
 		log.Printf(" > Swagger API Docs      : http://localhost:%s/swagger/index.html", cfg.Port)
 		log.Printf(" > Dashboard Web UI      : http://localhost:%s/dashboard", cfg.Port)
 		log.Printf(" > Register Endpoint     : POST http://localhost:%s/api/v1/auth/register", cfg.Port)
 		log.Printf(" > Login Endpoint        : POST http://localhost:%s/api/v1/auth/login", cfg.Port)
 		log.Printf(" > Create Project        : POST http://localhost:%s/api/v1/projects", cfg.Port)
+		log.Printf(" > Update Project        : PUT http://localhost:%s/api/v1/projects/{uuid}", cfg.Port)
 		log.Printf(" > OBS Overlay Pattern   : http://localhost:%s/overlay/{project_uuid}", cfg.Port)
 		log.Printf(" > Trigger Alert Pattern : POST http://localhost:%s/api/v1/projects/{project_uuid}/alert", cfg.Port)
 		log.Println("==================================================================")

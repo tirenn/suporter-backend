@@ -1,23 +1,5 @@
 basePath: /
 definitions:
-  domain.AlertRequest:
-    properties:
-      duration:
-        example: 5000
-        type: integer
-      message:
-        example: Awesome stream! Thanks for playing!
-        type: string
-      name:
-        example: Alex
-        type: string
-      type:
-        example: donation
-        type: string
-    required:
-    - message
-    - name
-    type: object
   domain.AuthResponse:
     properties:
       access_token:
@@ -28,8 +10,15 @@ definitions:
     type: object
   domain.CreateProjectRequest:
     properties:
+      css_style:
+        type: string
       description:
         example: Overlay for my gaming channel
+        type: string
+      duration:
+        example: 5000
+        type: integer
+      html_template:
         type: string
       name:
         example: My Stream Project
@@ -37,6 +26,49 @@ definitions:
     required:
     - name
     type: object
+  domain.CreateTemplateRequest:
+    properties:
+      css_style:
+        type: string
+      duration:
+        example: 5000
+        type: integer
+      event_type:
+        example: donation
+        type: string
+      fields:
+        example:
+        - '["name"'
+        - '"amount"'
+        - '"description"]'
+        items:
+          type: string
+        type: array
+      html_template:
+        example: <h1>{{name}} donated {{amount}}</h1><p>{{description}}</p>
+        type: string
+      name:
+        example: New Donation Alert
+        type: string
+    required:
+    - event_type
+    - html_template
+    - name
+    type: object
+  domain.EventType:
+    enum:
+    - donation
+    - subscriber
+    - follower
+    - cheer
+    - custom
+    type: string
+    x-enum-varnames:
+    - EventTypeDonation
+    - EventTypeSubscriber
+    - EventTypeFollower
+    - EventTypeCheer
+    - EventTypeCustom
   domain.LoginRequest:
     properties:
       email:
@@ -53,14 +85,27 @@ definitions:
     properties:
       created_at:
         type: string
+      css_style:
+        type: string
       description:
-        example: Stream overlay for YouTube
+        example: Superchat donation alert overlay
+        type: string
+      duration:
+        example: 5000
+        type: integer
+      event_type:
+        example: donation
+        type: string
+      fields:
+        example: '["name","amount","message"]'
+        type: string
+      html_template:
         type: string
       id:
         example: 1
         type: integer
       name:
-        example: Main Stream
+        example: Main Stream Overlay
         type: string
       obs_url:
         example: http://localhost:8080/overlay/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3d0001
@@ -90,6 +135,82 @@ definitions:
     - email
     - name
     - password
+    type: object
+  domain.Template:
+    properties:
+      created_at:
+        type: string
+      css_style:
+        example: '.alert { background: gold; color: black; }'
+        type: string
+      duration:
+        example: 5000
+        type: integer
+      event_type:
+        allOf:
+        - $ref: '#/definitions/domain.EventType'
+        example: donation
+      fields:
+        example: '["name","amount","description"]'
+        type: string
+      html_template:
+        example: <div class='alert'><h1>{{name}} donated {{amount}}</h1><p>{{description}}</p></div>
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: New Donation Alert
+        type: string
+      project_id:
+        example: 1
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  domain.TriggerAlertRequest:
+    properties:
+      amount:
+        example: $50.00
+        type: string
+      duration:
+        example: 5000
+        type: integer
+      message:
+        example: Keep up the awesome stream!
+        type: string
+      name:
+        example: Alex
+        type: string
+    required:
+    - amount
+    - message
+    - name
+    type: object
+  domain.TriggerCustomAlertRequest:
+    properties:
+      duration:
+        example: 5000
+        type: integer
+      payload:
+        additionalProperties:
+          type: string
+        type: object
+    required:
+    - payload
+    type: object
+  domain.UpdateProjectRequest:
+    properties:
+      css_style:
+        type: string
+      description:
+        type: string
+      duration:
+        type: integer
+      html_template:
+        type: string
+      name:
+        type: string
     type: object
   domain.User:
     properties:
@@ -185,7 +306,7 @@ paths:
       - Authentication
   /api/v1/projects:
     get:
-      description: Get user projects with generated OBS Stream URLs.
+      description: Get user projects with generated OBS Stream URLs and template details.
       produces:
       - application/json
       responses:
@@ -208,10 +329,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create project with name and description. Generates unique Project
-        UUID v4 & OBS Stream URL.
+      description: Create project with name, description, and overlay template HTML/CSS.
+        Generates unique Project UUID v4 & OBS Stream URL.
       parameters:
-      - description: Project Info
+      - description: Project Info & Template
         in: body
         name: request
         required: true
@@ -232,12 +353,41 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Create a new project
+      summary: Create a new project with donation overlay template
       tags:
       - Projects
   /api/v1/projects/{uuid}:
+    delete:
+      description: Delete project by UUID.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete project
+      tags:
+      - Projects
     get:
-      description: Retrieve single project details with OBS Stream URL.
+      description: Retrieve single project details with OBS Stream URL & template
+        HTML/CSS.
       parameters:
       - description: Project UUID
         in: path
@@ -257,28 +407,94 @@ paths:
             additionalProperties:
               type: string
             type: object
-      security:
-      - BearerAuth: []
       summary: Get project details by UUID
       tags:
       - Projects
-  /api/v1/projects/{uuid}/alert:
-    post:
+    put:
       consumes:
       - application/json
-      description: Send name and message to pop up on OBS Studio overlay in real-time.
+      description: Update project name, description, html_template, css_style, or
+        duration.
       parameters:
       - description: Project UUID
         in: path
         name: uuid
         required: true
         type: string
-      - description: Alert Payload
+      - description: Updated Project Template Info
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/domain.AlertRequest'
+          $ref: '#/definitions/domain.UpdateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Project'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update project overlay template
+      tags:
+      - Projects
+  /api/v1/projects/{uuid}/alert:
+    post:
+      consumes:
+      - application/json
+      description: Send required donation variables (name, amount, message) to pop
+        up on OBS Studio overlay in real-time.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Donation Alert Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TriggerAlertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Project Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger donation alert to project OBS overlay
+      tags:
+      - Projects
+  /api/v1/projects/{uuid}/templates:
+    get:
+      description: Retrieve custom alert templates configured for a project.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -288,14 +504,188 @@ paths:
             additionalProperties: true
             type: object
         "404":
-          description: Project Not Found
+          description: Not Found
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Trigger alert to project OBS overlay
+      summary: List custom overlay templates for a project
       tags:
-      - Projects
+      - Templates
+    post:
+      consumes:
+      - application/json
+      description: Add a custom alert template with HTML, CSS, and dynamic variables
+        (e.g. {{name}}, {{amount}}, {{description}}).
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Template Definition
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Template'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create custom overlay template
+      tags:
+      - Templates
+  /api/v1/projects/{uuid}/templates/{id}:
+    delete:
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete custom overlay template
+      tags:
+      - Templates
+    get:
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Template'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get custom template details
+      tags:
+      - Templates
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated Template
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Template'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update custom overlay template
+      tags:
+      - Templates
+  /api/v1/projects/{uuid}/templates/{id}/trigger:
+    post:
+      consumes:
+      - application/json
+      description: Send dynamic key-value payload (e.g. name, amount, description)
+        to pop up on OBS Studio overlay using custom template HTML/CSS.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dynamic Key-Value Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TriggerCustomAlertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger live alert using custom overlay template
+      tags:
+      - Templates
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and your JWT token.

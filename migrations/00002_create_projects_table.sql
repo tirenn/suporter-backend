@@ -5,6 +5,11 @@ CREATE TABLE IF NOT EXISTS projects (
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(150) NOT NULL,
     description TEXT,
+    event_type VARCHAR(50) DEFAULT 'donation',
+    html_template TEXT NOT NULL DEFAULT '',
+    css_style TEXT DEFAULT '',
+    fields TEXT NOT NULL DEFAULT '["name","amount","message"]',
+    duration INT DEFAULT 7000,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
