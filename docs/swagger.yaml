@@ -1,0 +1,305 @@
+basePath: /
+definitions:
+  domain.AlertRequest:
+    properties:
+      duration:
+        example: 5000
+        type: integer
+      message:
+        example: Awesome stream! Thanks for playing!
+        type: string
+      name:
+        example: Alex
+        type: string
+      type:
+        example: donation
+        type: string
+    required:
+    - message
+    - name
+    type: object
+  domain.AuthResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1Ni...
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+    type: object
+  domain.CreateProjectRequest:
+    properties:
+      description:
+        example: Overlay for my gaming channel
+        type: string
+      name:
+        example: My Stream Project
+        type: string
+    required:
+    - name
+    type: object
+  domain.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: secret123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  domain.Project:
+    properties:
+      created_at:
+        type: string
+      description:
+        example: Stream overlay for YouTube
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: Main Stream
+        type: string
+      obs_url:
+        example: http://localhost:8080/overlay/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3d0001
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        example: 1
+        type: integer
+      uuid:
+        example: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3d0001
+        type: string
+    type: object
+  domain.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      name:
+        example: John Doe
+        type: string
+      password:
+        example: secret123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  domain.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        example: user@example.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: John Doe
+        type: string
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@suporter.local
+    name: Suporter Support
+  description: High-performance REST API & real-time OBS Studio Browser Source Overlay
+    Backend built with Golang, Gin, GORM, PostgreSQL, and Goose.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Suporter API - OBS Studio Overlay Backend
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate email & password, returns JWT token.
+      parameters:
+      - description: User Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AuthResponse'
+        "401":
+          description: Invalid email or password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login user account
+      tags:
+      - Authentication
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register user with name, email, and password. Returns JWT token.
+      parameters:
+      - description: User Registration Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Email already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user account
+      tags:
+      - Authentication
+  /api/v1/projects:
+    get:
+      description: Get user projects with generated OBS Stream URLs.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all projects for authenticated user
+      tags:
+      - Projects
+    post:
+      consumes:
+      - application/json
+      description: Create project with name and description. Generates unique Project
+        UUID v4 & OBS Stream URL.
+      parameters:
+      - description: Project Info
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Project'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new project
+      tags:
+      - Projects
+  /api/v1/projects/{uuid}:
+    get:
+      description: Retrieve single project details with OBS Stream URL.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Project'
+        "404":
+          description: Project Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get project details by UUID
+      tags:
+      - Projects
+  /api/v1/projects/{uuid}/alert:
+    post:
+      consumes:
+      - application/json
+      description: Send name and message to pop up on OBS Studio overlay in real-time.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: Alert Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AlertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Trigger alert to project OBS overlay
+      tags:
+      - Projects
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

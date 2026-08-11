@@ -1,0 +1,452 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "High-performance REST API \u0026 real-time OBS Studio Browser Source Overlay Backend built with Golang, Gin, GORM, PostgreSQL, and Goose.",
+        "title": "Suporter API - OBS Studio Overlay Backend",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "Suporter Support",
+            "email": "support@suporter.local"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Authenticate email \u0026 password, returns JWT token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Login user account",
+                "parameters": [
+                    {
+                        "description": "User Credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.AuthResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid email or password",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "description": "Register user with name, email, and password. Returns JWT token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Register a new user account",
+                "parameters": [
+                    {
+                        "description": "User Registration Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Email already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get user projects with generated OBS Stream URLs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "List all projects for authenticated user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create project with name and description. Generates unique Project UUID v4 \u0026 OBS Stream URL.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Create a new project",
+                "parameters": [
+                    {
+                        "description": "Project Info",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Project"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{uuid}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve single project details with OBS Stream URL.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Get project details by UUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Project"
+                        }
+                    },
+                    "404": {
+                        "description": "Project Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{uuid}/alert": {
+            "post": {
+                "description": "Send name and message to pop up on OBS Studio overlay in real-time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Trigger alert to project OBS overlay",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Alert Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.AlertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Project Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.AlertRequest": {
+            "type": "object",
+            "required": [
+                "message",
+                "name"
+            ],
+            "properties": {
+                "duration": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Awesome stream! Thanks for playing!"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Alex"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "donation"
+                }
+            }
+        },
+        "domain.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1Ni..."
+                },
+                "user": {
+                    "$ref": "#/definitions/domain.User"
+                }
+            }
+        },
+        "domain.CreateProjectRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Overlay for my gaming channel"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "My Stream Project"
+                }
+            }
+        },
+        "domain.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "secret123"
+                }
+            }
+        },
+        "domain.Project": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Stream overlay for YouTube"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Main Stream"
+                },
+                "obs_url": {
+                    "type": "string",
+                    "example": "http://localhost:8080/overlay/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3d0001"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "uuid": {
+                    "type": "string",
+                    "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3d0001"
+                }
+            }
+        },
+        "domain.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "secret123"
+                }
+            }
+        },
+        "domain.User": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and your JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
