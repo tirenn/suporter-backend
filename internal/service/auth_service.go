@@ -61,7 +61,6 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 	}
 
 	var webhookKey string
-	var webhookSecret string
 	bytesKey := make([]byte, 16)
 	if _, err := rand.Read(bytesKey); err == nil {
 		webhookKey = "wk_" + hex.EncodeToString(bytesKey)
@@ -69,20 +68,12 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 		webhookKey = "wk_" + uuid.New().String()
 	}
 
-	bytesSec := make([]byte, 24)
-	if _, err := rand.Read(bytesSec); err == nil {
-		webhookSecret = "ws_" + hex.EncodeToString(bytesSec)
-	} else {
-		webhookSecret = "ws_" + uuid.New().String()
-	}
-
 	u := &domain.User{
-		Name:          strings.TrimSpace(req.Name),
-		Username:      username,
-		PasswordHash:  string(hashedPassword),
-		Role:          role,
-		WebhookKey:    webhookKey,
-		WebhookSecret: webhookSecret,
+		Name:         strings.TrimSpace(req.Name),
+		Username:     username,
+		PasswordHash: string(hashedPassword),
+		Role:         role,
+		WebhookKey:   webhookKey,
 	}
 
 	if err := s.userRepo.Create(ctx, u); err != nil {

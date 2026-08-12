@@ -5,7 +5,6 @@ import "time"
 type Donation struct {
 	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id" example:"1"`
 	StreamerID  uint64    `gorm:"index;not null;column:streamer_id" json:"streamer_id" example:"1"`
-	Username    string    `gorm:"not null;type:varchar(50)" json:"username" example:"viewer123"`
 	SenderName  string    `gorm:"not null;type:varchar(100)" json:"sender_name" example:"Jane Donor"`
 	Amount      int64     `gorm:"not null" json:"amount" example:"50000"`
 	UniqueCode  int       `gorm:"not null" json:"unique_code" example:"142"`
@@ -18,7 +17,6 @@ type Donation struct {
 
 type CreateDonationRequest struct {
 	StreamerUsername string `json:"streamer_username" example:"streamer123" binding:"required"`
-	SenderUsername   string `json:"sender_username" example:"viewer123" binding:"required"`
 	SenderName       string `json:"sender_name" example:"Jane Donor" binding:"required"`
 	Amount           int64  `json:"amount" example:"50000" binding:"required,min=5000,max=10000000"`
 	Message          string `json:"message" example:"Keep up the great stream!"`

@@ -2,10 +2,7 @@ package service
 
 import (
 	"context"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"time"
@@ -16,7 +13,7 @@ import (
 
 type DonationService interface {
 	CreateDonation(ctx context.Context, req domain.CreateDonationRequest) (*domain.Donation, error)
-	VerifyWebhookDonation(ctx context.Context, webhookKey string, signature string, bodyBytes []byte, incomingAmount int64) (*domain.Donation, error)
+	VerifyWebhookDonation(ctx context.Context, webhookKey string, incomingAmount int64) (*domain.Donation, error)
 }
 
 type donationService struct {
@@ -88,7 +85,6 @@ func (s *donationService) CreateDonation(ctx context.Context, req domain.CreateD
 
 	donation := &domain.Donation{
 		StreamerID:  streamer.ID,
-		Username:    req.SenderUsername,
 		SenderName:  req.SenderName,
 		Amount:      req.Amount,
 		UniqueCode:  uniqueCode,
@@ -104,19 +100,10 @@ func (s *donationService) CreateDonation(ctx context.Context, req domain.CreateD
 	return donation, nil
 }
 
-func (s *donationService) VerifyWebhookDonation(ctx context.Context, webhookKey string, signature string, bodyBytes []byte, incomingAmount int64) (*domain.Donation, error) {
+func (s *donationService) VerifyWebhookDonation(ctx context.Context, webhookKey string, incomingAmount int64) (*domain.Donation, error) {
 	streamer, err := s.userRepo.FindByWebhookKey(ctx, webhookKey)
 	if err != nil {
 		return nil, fmt.Errorf("unauthorized: invalid webhook key")
-	}
-
-	// Verify HMAC SHA256 Signature using streamer's specific WebhookSecret
-	mac := hmac.New(sha256.New, []byte(streamer.WebhookSecret))
-	mac.Write(bodyBytes)
-	expectedSignature := hex.EncodeToString(mac.Sum(nil))
-
-	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
-		return nil, fmt.Errorf("unauthorized: invalid HMAC signature")
 	}
 
 	donation, err := s.donationRepo.FindPendingByTotalAmount(ctx, streamer.ID, incomingAmount)

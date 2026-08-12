@@ -2,7 +2,6 @@
 CREATE TABLE IF NOT EXISTS donations (
     id BIGSERIAL PRIMARY KEY,
     streamer_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    username VARCHAR(50) NOT NULL,
     sender_name VARCHAR(100) NOT NULL,
     amount BIGINT NOT NULL,
     unique_code INT NOT NULL,

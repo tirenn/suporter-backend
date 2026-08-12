@@ -13,7 +13,6 @@ type User struct {
 	Name         string    `gorm:"not null;type:varchar(100)" json:"name" example:"John Doe"`
 	Role         string    `gorm:"not null;type:varchar(20);default:'streamer'" json:"role" example:"streamer"`
 	WebhookKey   string    `gorm:"uniqueIndex;type:varchar(64)" json:"webhook_key,omitempty" example:"wk_a1b2c3d4e5f6..."`
-	WebhookSecret string    `gorm:"uniqueIndex;type:varchar(64)" json:"webhook_secret,omitempty" example:"ws_a1b2c3d4e5f6..."`
 	QRISUrl      string    `gorm:"type:text;column:qris_url" json:"qris_url,omitempty" example:"https://i.imgur.com/abc.jpg"`
 	IsActive     bool      `gorm:"not null;default:false" json:"is_active"`
 	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`

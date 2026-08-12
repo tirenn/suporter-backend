@@ -50,8 +50,8 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 }
 
 func DropAllTables(db *sql.DB) error {
-	log.Println("[DB Reset] Dropping all database tables (goose_db_version, templates, alerts, projects, users)...")
-	_, err := db.Exec("DROP TABLE IF EXISTS goose_db_version, templates, alerts, projects, users CASCADE;")
+	log.Println("[DB Reset] Dropping all database tables (goose_db_version, templates, alerts, projects, donations, users)...")
+	_, err := db.Exec("DROP TABLE IF EXISTS goose_db_version, templates, alerts, projects, donations, users CASCADE;")
 	if err != nil {
 		return fmt.Errorf("failed to drop tables: %w", err)
 	}

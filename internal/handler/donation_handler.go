@@ -1,9 +1,6 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
 	"net/http"
 	"strings"
 
@@ -79,27 +76,13 @@ func (h *DonationHandler) VerifyWebhookDonation(c *gin.Context) {
 		return
 	}
 
-	signature := strings.TrimSpace(c.GetHeader("X-Suporter-Signature"))
-	if signature == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: Missing X-Suporter-Signature header"})
-		return
-	}
-
-	bodyBytes, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-		return
-	}
-	// Restore body for any further middleware reads, though not strictly needed here
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
 	var req domain.WebhookDonationRequest
-	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: total amount is required"})
 		return
 	}
 
-	donation, err := h.donationService.VerifyWebhookDonation(c.Request.Context(), webhookKey, signature, bodyBytes, req.Amount)
+	donation, err := h.donationService.VerifyWebhookDonation(c.Request.Context(), webhookKey, req.Amount)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
