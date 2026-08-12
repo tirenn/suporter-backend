@@ -117,9 +117,9 @@ func main() {
 	donationService := service.NewDonationService(donationRepo, userRepo, projectRepo, sseBroker)
 
 	// Handlers
-	authHandler := handler.NewAuthHandler(authService)
+	authHandler := handler.NewAuthHandler(authService, cfg.RecaptchaSecretKey)
 	projectHandler := handler.NewProjectHandler(projectService, sseBroker)
-	donationHandler := handler.NewDonationHandler(donationService)
+	donationHandler := handler.NewDonationHandler(donationService, cfg.RecaptchaSecretKey, cfg.WebhookSecret)
 
 	staticDir := "./static"
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
@@ -157,19 +157,25 @@ func main() {
 			authGroup.POST("/login", authHandler.Login)
 		}
 
+		// Public: Streamer profile lookup (for donation page)
+		api.GET("/streamers/:username", authHandler.GetStreamerPublicProfile)
+
+		// Public Donation Endpoint — rate-limited + Turnstile CAPTCHA
+		api.POST("/donations", middleware.DonationRateLimiter(), donationHandler.CreateDonation)
+
 		// Protected Routes (Requires JWT Token)
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(authService))
 		{
+			// Streamer profile update (QRIS URL)
+			protected.PUT("/profile", authHandler.UpdateProfile)
+
 			// Projects Management
 			protected.POST("/projects", projectHandler.CreateProject)
 			protected.GET("/projects", projectHandler.GetProjects)
 			protected.PUT("/projects/:uuid", projectHandler.UpdateProject)
 			protected.DELETE("/projects/:uuid", projectHandler.DeleteProject)
 			protected.POST("/projects/:uuid/alert", projectHandler.TriggerProjectAlert)
-
-			// Viewer Donation Trigger
-			protected.POST("/donations", donationHandler.CreateDonation)
 		}
 
 		// Public Project Route
@@ -207,12 +213,14 @@ func main() {
 
 	go func() {
 		log.Println("==================================================================")
-		log.Println("  🚀 SUPORTER BACKEND (Multi-Role Streamer/Viewer Enabled)        ")
+		log.Println("  🚀 SUPORTER BACKEND (Streamer-Only Auth + Rate Limiter)          ")
 		log.Println("==================================================================")
 		log.Printf(" > Swagger API Docs      : http://localhost:%s/swagger/index.html", cfg.Port)
 		log.Printf(" > Dashboard Web UI      : http://localhost:%s/dashboard", cfg.Port)
 		log.Printf(" > Register Endpoint     : POST http://localhost:%s/api/v1/auth/register", cfg.Port)
 		log.Printf(" > Login Endpoint        : POST http://localhost:%s/api/v1/auth/login", cfg.Port)
+		log.Printf(" > Streamer Profile      : GET  http://localhost:%s/api/v1/streamers/:username", cfg.Port)
+		log.Printf(" > Donation Endpoint     : POST http://localhost:%s/api/v1/donations (public, rate-limited)", cfg.Port)
 		log.Printf(" > Webhook callback URL  : POST http://localhost:%s/api/v1/webhooks/donation?key={streamer_key}", cfg.Port)
 		log.Println("==================================================================")
 

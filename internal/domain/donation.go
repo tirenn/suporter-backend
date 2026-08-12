@@ -18,9 +18,11 @@ type Donation struct {
 
 type CreateDonationRequest struct {
 	StreamerUsername string `json:"streamer_username" example:"streamer123" binding:"required"`
+	SenderUsername   string `json:"sender_username" example:"viewer123" binding:"required"`
 	SenderName       string `json:"sender_name" example:"Jane Donor" binding:"required"`
 	Amount           int64  `json:"amount" example:"50000" binding:"required,min=5000,max=10000000"`
 	Message          string `json:"message" example:"Keep up the great stream!"`
+	RecaptchaToken   string `json:"recaptcha_token" binding:"required"`
 }
 
 type WebhookDonationRequest struct {

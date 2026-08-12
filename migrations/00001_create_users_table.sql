@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'streamer', -- 'streamer' or 'viewer'
     webhook_key VARCHAR(64) UNIQUE,
+    qris_url TEXT DEFAULT '',
+    is_active BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

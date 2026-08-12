@@ -12,7 +12,7 @@ import (
 )
 
 type DonationService interface {
-	CreateDonation(ctx context.Context, username string, req domain.CreateDonationRequest) (*domain.Donation, error)
+	CreateDonation(ctx context.Context, req domain.CreateDonationRequest) (*domain.Donation, error)
 	VerifyWebhookDonation(ctx context.Context, webhookKey string, incomingAmount int64) (*domain.Donation, error)
 }
 
@@ -37,7 +37,7 @@ func NewDonationService(
 	}
 }
 
-func (s *donationService) CreateDonation(ctx context.Context, username string, req domain.CreateDonationRequest) (*domain.Donation, error) {
+func (s *donationService) CreateDonation(ctx context.Context, req domain.CreateDonationRequest) (*domain.Donation, error) {
 	if req.Amount < 5000 || req.Amount > 10000000 {
 		return nil, fmt.Errorf("donation amount must be between Rp 5.000 and Rp 10.000.000")
 	}
@@ -49,6 +49,10 @@ func (s *donationService) CreateDonation(ctx context.Context, username string, r
 
 	if streamer.Role != "streamer" {
 		return nil, fmt.Errorf("recipient user is not a streamer")
+	}
+
+	if !streamer.IsActive {
+		return nil, fmt.Errorf("streamer sedang tidak aktif")
 	}
 
 	// Generate 3-digit unique code (100 - 999) checking if there is a pending donation with the same code for this streamer
@@ -81,7 +85,7 @@ func (s *donationService) CreateDonation(ctx context.Context, username string, r
 
 	donation := &domain.Donation{
 		StreamerID:  streamer.ID,
-		Username:    username,
+		Username:    req.SenderUsername,
 		SenderName:  req.SenderName,
 		Amount:      req.Amount,
 		UniqueCode:  uniqueCode,

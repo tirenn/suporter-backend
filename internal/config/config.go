@@ -8,15 +8,17 @@ import (
 )
 
 type Config struct {
-	Port        string `mapstructure:"PORT"`
-	DBHost      string `mapstructure:"DB_HOST"`
-	DBPort      string `mapstructure:"DB_PORT"`
-	DBUser      string `mapstructure:"DB_USER"`
-	DBPassword  string `mapstructure:"DB_PASSWORD"`
-	DBName      string `mapstructure:"DB_NAME"`
-	DBSSLMode   string `mapstructure:"DB_SSLMODE"`
-	JWTSecret   string `mapstructure:"JWT_SECRET"`
-	JWTExpiryHr int    `mapstructure:"JWT_EXPIRY_HOURS"`
+	Port               string `mapstructure:"PORT"`
+	DBHost             string `mapstructure:"DB_HOST"`
+	DBPort             string `mapstructure:"DB_PORT"`
+	DBUser             string `mapstructure:"DB_USER"`
+	DBPassword         string `mapstructure:"DB_PASSWORD"`
+	DBName             string `mapstructure:"DB_NAME"`
+	DBSSLMode          string `mapstructure:"DB_SSLMODE"`
+	JWTSecret          string `mapstructure:"JWT_SECRET"`
+	JWTExpiryHr        int    `mapstructure:"JWT_EXPIRY_HOURS"`
+	RecaptchaSecretKey string `mapstructure:"RECAPTCHA_SECRET_KEY"`
+	WebhookSecret      string `mapstructure:"WEBHOOK_SECRET"`
 }
 
 func Load() *Config {
@@ -33,6 +35,9 @@ func Load() *Config {
 	viper.SetDefault("DB_SSLMODE", "disable")
 	viper.SetDefault("JWT_SECRET", "suporter-super-secret-jwt-key-2026")
 	viper.SetDefault("JWT_EXPIRY_HOURS", 24)
+	// Google reCAPTCHA v2 — replace with your real secret from console.cloud.google.com/recaptcha
+	viper.SetDefault("RECAPTCHA_SECRET_KEY", "6LeIxAcTAAAAAlO_PuGNMaximum-T6Nmcca_WDm")
+	viper.SetDefault("WEBHOOK_SECRET", "suporter-webhook-hmac-secret-2026")
 
 	viper.AutomaticEnv()
 

@@ -17,6 +17,7 @@ type UserRepository interface {
 	FindByUsername(ctx context.Context, username string) (*domain.User, error)
 	FindByWebhookKey(ctx context.Context, key string) (*domain.User, error)
 	FindByID(ctx context.Context, id uint64) (*domain.User, error)
+	UpdateQRISUrl(ctx context.Context, userID uint64, qrisUrl string) error
 }
 
 type gormUserRepository struct {
@@ -69,4 +70,15 @@ func (r *gormUserRepository) FindByID(ctx context.Context, id uint64) (*domain.U
 		return nil, fmt.Errorf("error finding user by id: %w", err)
 	}
 	return &u, nil
+}
+
+func (r *gormUserRepository) UpdateQRISUrl(ctx context.Context, userID uint64, qrisUrl string) error {
+	result := r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Update("qris_url", qrisUrl)
+	if result.Error != nil {
+		return fmt.Errorf("error updating QRIS URL: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return ErrUserNotFound
+	}
+	return nil
 }
