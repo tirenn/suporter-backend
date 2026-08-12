@@ -2,9 +2,7 @@ package handler
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -19,14 +17,12 @@ import (
 type DonationHandler struct {
 	donationService    service.DonationService
 	recaptchaSecretKey string
-	webhookSecret      string
 }
 
-func NewDonationHandler(donationService service.DonationService, recaptchaSecretKey, webhookSecret string) *DonationHandler {
+func NewDonationHandler(donationService service.DonationService, recaptchaSecretKey string) *DonationHandler {
 	return &DonationHandler{
 		donationService:    donationService,
 		recaptchaSecretKey: recaptchaSecretKey,
-		webhookSecret:      webhookSecret,
 	}
 }
 
@@ -94,28 +90,18 @@ func (h *DonationHandler) VerifyWebhookDonation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return
 	}
-	// Restore body for ShouldBindJSON
+	// Restore body for any further middleware reads, though not strictly needed here
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-	// Verify HMAC SHA256 Signature
-	mac := hmac.New(sha256.New, []byte(h.webhookSecret))
-	mac.Write(bodyBytes)
-	expectedSignature := hex.EncodeToString(mac.Sum(nil))
-
-	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: Invalid HMAC signature"})
-		return
-	}
-
 	var req domain.WebhookDonationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: total amount is required"})
 		return
 	}
 
-	donation, err := h.donationService.VerifyWebhookDonation(c.Request.Context(), webhookKey, req.Amount)
+	donation, err := h.donationService.VerifyWebhookDonation(c.Request.Context(), webhookKey, signature, bodyBytes, req.Amount)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 

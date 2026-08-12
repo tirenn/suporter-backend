@@ -119,7 +119,7 @@ func main() {
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService, cfg.RecaptchaSecretKey)
 	projectHandler := handler.NewProjectHandler(projectService, sseBroker)
-	donationHandler := handler.NewDonationHandler(donationService, cfg.RecaptchaSecretKey, cfg.WebhookSecret)
+	donationHandler := handler.NewDonationHandler(donationService, cfg.RecaptchaSecretKey)
 
 	staticDir := "./static"
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
