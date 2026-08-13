@@ -137,3 +137,28 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "QRIS URL updated successfully", "qris_url": req.QRISUrl})
 }
+
+// RegenerateWebhookKey godoc
+// @Summary Regenerate user's static webhook key (requires auth)
+// @Description Invalidates the old static webhook key and generates a new secure wk_... key.
+// @Tags Authentication
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} domain.User
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Router /api/v1/profile/webhook-key [put]
+func (h *AuthHandler) RegenerateWebhookKey(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	user, err := h.authService.RegenerateWebhookKey(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to regenerate webhook key: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}

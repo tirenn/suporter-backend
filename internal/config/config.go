@@ -33,7 +33,6 @@ func Load() *Config {
 	viper.SetDefault("DB_PASSWORD", "postgres")
 	viper.SetDefault("DB_NAME", "suporter")
 	viper.SetDefault("DB_SSLMODE", "disable")
-	viper.SetDefault("JWT_SECRET", "suporter-super-secret-jwt-key-2026")
 	viper.SetDefault("JWT_EXPIRY_HOURS", 24)
 	// Google reCAPTCHA v2 — replace with your real secret from console.cloud.google.com/recaptcha
 	viper.SetDefault("RECAPTCHA_SECRET_KEY", "6LeIxAcTAAAAAlO_PuGNMaximum-T6Nmcca_WDm")
@@ -50,6 +49,10 @@ func Load() *Config {
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		log.Fatalf("[Viper Error] Failed to unmarshal configuration: %v", err)
+	}
+
+	if cfg.JWTSecret == "" {
+		log.Fatalf("[Config Error] JWT_SECRET environment variable is required and cannot be empty")
 	}
 
 	return &cfg

@@ -129,6 +129,7 @@ func main() {
 
 	// Gin Engine Setup
 	r := gin.Default()
+	_ = r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
 	// CORS Middleware
 	r.Use(func(c *gin.Context) {
@@ -169,6 +170,7 @@ func main() {
 		{
 			// Streamer profile update (QRIS URL)
 			protected.PUT("/profile", authHandler.UpdateProfile)
+			protected.PUT("/profile/webhook-key", authHandler.RegenerateWebhookKey)
 
 			// Projects Management
 			protected.POST("/projects", projectHandler.CreateProject)

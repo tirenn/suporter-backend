@@ -27,7 +27,7 @@ type StreamerPublicProfile struct {
 }
 
 type RegisterRequest struct {
-	Name           string `json:"name" example:"John Doe" binding:"required"`
+	Name           string `json:"name" example:"John Doe" binding:"required,min=3,max=100"`
 	Username       string `json:"username" example:"johndoe" binding:"required,min=3,max=50"`
 	Password       string `json:"password" example:"secret123" binding:"required,min=6"`
 	Role           string `json:"role" example:"streamer" binding:"required,oneof=streamer"`

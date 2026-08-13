@@ -27,6 +27,13 @@ func AuthMiddleware(authService service.AuthService) gin.HandlerFunc {
 			return
 		}
 
+		active, err := authService.IsUserActive(c.Request.Context(), claims.UserID)
+		if err != nil || !active {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Akun Anda tidak aktif atau tidak ditemukan"})
+			c.Abort()
+			return
+		}
+
 		c.Set(UserIDKey, claims.UserID)
 		c.Set(UserUsernameKey, claims.Username)
 

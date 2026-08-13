@@ -18,6 +18,7 @@ type UserRepository interface {
 	FindByWebhookKey(ctx context.Context, key string) (*domain.User, error)
 	FindByID(ctx context.Context, id uint64) (*domain.User, error)
 	UpdateQRISUrl(ctx context.Context, userID uint64, qrisUrl string) error
+	UpdateWebhookKey(ctx context.Context, userID uint64, webhookKey string) error
 }
 
 type gormUserRepository struct {
@@ -76,6 +77,17 @@ func (r *gormUserRepository) UpdateQRISUrl(ctx context.Context, userID uint64, q
 	result := r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Update("qris_url", qrisUrl)
 	if result.Error != nil {
 		return fmt.Errorf("error updating QRIS URL: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
+func (r *gormUserRepository) UpdateWebhookKey(ctx context.Context, userID uint64, webhookKey string) error {
+	result := r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Update("webhook_key", webhookKey)
+	if result.Error != nil {
+		return fmt.Errorf("error updating webhook key: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return ErrUserNotFound

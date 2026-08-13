@@ -24,6 +24,8 @@ type AuthService interface {
 	ValidateToken(tokenString string) (*domain.JWTClaims, error)
 	GetPublicProfile(ctx context.Context, username string) (*domain.StreamerPublicProfile, error)
 	UpdateQRISUrl(ctx context.Context, userID uint64, qrisUrl string) error
+	IsUserActive(ctx context.Context, userID uint64) (bool, error)
+	RegenerateWebhookKey(ctx context.Context, userID uint64) (*domain.User, error)
 }
 
 type authService struct {
@@ -39,6 +41,11 @@ func NewAuthService(userRepo repository.UserRepository, cfg *config.Config) Auth
 }
 
 func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) (*domain.AuthResponse, error) {
+	name := strings.TrimSpace(req.Name)
+	if len(name) < 3 {
+		return nil, fmt.Errorf("full name must be at least 3 characters")
+	}
+
 	username := strings.ToLower(strings.TrimSpace(req.Username))
 	if len(username) < 3 {
 		return nil, fmt.Errorf("username must be at least 3 characters")
@@ -53,6 +60,21 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 	existingUser, err := s.userRepo.FindByUsername(ctx, username)
 	if err == nil && existingUser != nil {
 		return nil, fmt.Errorf("username is already taken")
+	}
+
+	if len(req.Password) < 8 {
+		return nil, fmt.Errorf("password must be at least 8 characters")
+	}
+	var hasUpper, hasSymbol bool
+	for _, r := range req.Password {
+		if r >= 'A' && r <= 'Z' {
+			hasUpper = true
+		} else if strings.ContainsRune("!@#$%^&*(),.?\":{}|<>_+-=[]\\/~`", r) {
+			hasSymbol = true
+		}
+	}
+	if !hasUpper || !hasSymbol {
+		return nil, fmt.Errorf("password must contain at least one uppercase letter and one symbol")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -185,4 +207,29 @@ func (s *authService) generateJWT(user *domain.User) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func (s *authService) IsUserActive(ctx context.Context, userID uint64) (bool, error) {
+	u, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	return u.IsActive, nil
+}
+
+func (s *authService) RegenerateWebhookKey(ctx context.Context, userID uint64) (*domain.User, error) {
+	var webhookKey string
+	bytesKey := make([]byte, 16)
+	if _, err := rand.Read(bytesKey); err == nil {
+		webhookKey = "wk_" + hex.EncodeToString(bytesKey)
+	} else {
+		webhookKey = "wk_" + uuid.New().String()
+	}
+
+	if err := s.userRepo.UpdateWebhookKey(ctx, userID, webhookKey); err != nil {
+		return nil, err
+	}
+
+	// Fetch updated user profile
+	return s.userRepo.FindByID(ctx, userID)
 }
