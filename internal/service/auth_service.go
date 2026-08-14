@@ -67,16 +67,18 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 	if len(req.Password) < 8 {
 		return nil, fmt.Errorf("password must be at least 8 characters")
 	}
-	var hasUpper, hasSymbol bool
+	var hasUpper, hasNumber, hasSymbol bool
 	for _, r := range req.Password {
 		if r >= 'A' && r <= 'Z' {
 			hasUpper = true
+		} else if r >= '0' && r <= '9' {
+			hasNumber = true
 		} else if strings.ContainsRune("!@#$%^&*(),.?\":{}|<>_+-=[]\\/~`", r) {
 			hasSymbol = true
 		}
 	}
-	if !hasUpper || !hasSymbol {
-		return nil, fmt.Errorf("password must contain at least one uppercase letter and one symbol")
+	if !hasUpper || !hasNumber || !hasSymbol {
+		return nil, fmt.Errorf("password must contain at least one uppercase letter, one number, and one symbol")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)

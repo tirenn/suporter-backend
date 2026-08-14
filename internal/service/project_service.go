@@ -157,6 +157,11 @@ func NewProjectService(projectRepo repository.ProjectRepository, cfg *config.Con
 }
 
 func (s *projectService) CreateProject(ctx context.Context, userID uint64, req domain.CreateProjectRequest) (*domain.Project, error) {
+	existing, err := s.projectRepo.FindByUserID(ctx, userID)
+	if err == nil && len(existing) > 0 {
+		return nil, fmt.Errorf("anda sudah memiliki project overlay aktif. Setiap streamer dibatasi maksimal 1 project")
+	}
+
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		return nil, fmt.Errorf("project name is required")
