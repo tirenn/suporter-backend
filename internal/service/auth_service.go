@@ -21,10 +21,12 @@ import (
 type AuthService interface {
 	Register(ctx context.Context, req domain.RegisterRequest) (*domain.AuthResponse, error)
 	Login(ctx context.Context, req domain.LoginRequest) (*domain.AuthResponse, error)
+	MobileLogin(ctx context.Context, username, password string) (*domain.AuthResponse, error)
 	ValidateToken(tokenString string) (*domain.JWTClaims, error)
 	GetPublicProfile(ctx context.Context, username string) (*domain.StreamerPublicProfile, error)
 	UpdateQRISUrl(ctx context.Context, userID uint64, qrisUrl string) error
 	IsUserActive(ctx context.Context, userID uint64) (bool, error)
+	GetProfile(ctx context.Context, userID uint64) (*domain.User, error)
 	RegenerateWebhookKey(ctx context.Context, userID uint64) (*domain.User, error)
 }
 
@@ -90,12 +92,21 @@ func (s *authService) Register(ctx context.Context, req domain.RegisterRequest) 
 		webhookKey = "wk_" + uuid.New().String()
 	}
 
+	var webhookSecret string
+	bytesSecret := make([]byte, 24)
+	if _, err := rand.Read(bytesSecret); err == nil {
+		webhookSecret = "whsec_" + hex.EncodeToString(bytesSecret)
+	} else {
+		webhookSecret = "whsec_" + uuid.New().String()
+	}
+
 	u := &domain.User{
-		Name:         strings.TrimSpace(req.Name),
-		Username:     username,
-		PasswordHash: string(hashedPassword),
-		Role:         role,
-		WebhookKey:   webhookKey,
+		Name:          strings.TrimSpace(req.Name),
+		Username:      username,
+		PasswordHash:  string(hashedPassword),
+		Role:          role,
+		WebhookKey:    webhookKey,
+		WebhookSecret: webhookSecret,
 	}
 
 	if err := s.userRepo.Create(ctx, u); err != nil {
@@ -217,6 +228,32 @@ func (s *authService) IsUserActive(ctx context.Context, userID uint64) (bool, er
 	return u.IsActive, nil
 }
 
+func (s *authService) MobileLogin(ctx context.Context, username, password string) (*domain.AuthResponse, error) {
+	username = strings.ToLower(strings.TrimSpace(username))
+	u, err := s.userRepo.FindByUsername(ctx, username)
+	if err != nil {
+		return nil, errors.New("username atau password salah")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+		return nil, errors.New("username atau password salah")
+	}
+
+	if !u.IsActive {
+		return nil, errors.New("akun Anda belum aktif, silakan hubungi admin")
+	}
+
+	token, err := s.generateJWT(u)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	return &domain.AuthResponse{
+		AccessToken: token,
+		User:        *u,
+	}, nil
+}
+
 func (s *authService) RegenerateWebhookKey(ctx context.Context, userID uint64) (*domain.User, error) {
 	var webhookKey string
 	bytesKey := make([]byte, 16)
@@ -226,10 +263,22 @@ func (s *authService) RegenerateWebhookKey(ctx context.Context, userID uint64) (
 		webhookKey = "wk_" + uuid.New().String()
 	}
 
-	if err := s.userRepo.UpdateWebhookKey(ctx, userID, webhookKey); err != nil {
+	var webhookSecret string
+	bytesSecret := make([]byte, 24)
+	if _, err := rand.Read(bytesSecret); err == nil {
+		webhookSecret = "whsec_" + hex.EncodeToString(bytesSecret)
+	} else {
+		webhookSecret = "whsec_" + uuid.New().String()
+	}
+
+	if err := s.userRepo.UpdateWebhookCredentials(ctx, userID, webhookKey, webhookSecret); err != nil {
 		return nil, err
 	}
 
 	// Fetch updated user profile
+	return s.userRepo.FindByID(ctx, userID)
+}
+
+func (s *authService) GetProfile(ctx context.Context, userID uint64) (*domain.User, error) {
 	return s.userRepo.FindByID(ctx, userID)
 }

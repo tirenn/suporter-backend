@@ -86,6 +86,33 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// MobileLogin godoc
+// @Summary Mobile Streamer Login (No reCAPTCHA)
+// @Description Direct login endpoint for native mobile clients (Android) using username and password.
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body domain.MobileLoginRequest true "Mobile User Credentials"
+// @Success 200 {object} domain.AuthResponse
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Router /api/v1/auth/mobile-login [post]
+func (h *AuthHandler) MobileLogin(c *gin.Context) {
+	var req domain.MobileLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	resp, err := h.authService.MobileLogin(c.Request.Context(), req.Username, req.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
 // GetStreamerPublicProfile godoc
 // @Summary Get a streamer's public profile (name + QRIS URL)
 // @Description Returns streamer's display name and QRIS QR image URL for the donation page.
@@ -157,6 +184,31 @@ func (h *AuthHandler) RegenerateWebhookKey(c *gin.Context) {
 	user, err := h.authService.RegenerateWebhookKey(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to regenerate webhook key: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// GetProfile godoc
+// @Summary Get streamer's current profile (requires auth)
+// @Description Returns the authenticated streamer's latest profile (including is_active, webhook_key, etc.).
+// @Tags Authentication
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} domain.User
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Router /api/v1/profile [get]
+func (h *AuthHandler) GetProfile(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	user, err := h.authService.GetProfile(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch profile: " + err.Error()})
 		return
 	}
 

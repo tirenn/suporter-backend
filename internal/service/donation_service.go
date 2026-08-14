@@ -2,18 +2,25 @@ package service
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
+	"strconv"
 	"time"
 
+	"suporter-backend/internal/config"
 	"suporter-backend/internal/domain"
 	"suporter-backend/internal/repository"
 )
 
 type DonationService interface {
-	CreateDonation(ctx context.Context, req domain.CreateDonationRequest) (*domain.Donation, error)
-	VerifyWebhookDonation(ctx context.Context, webhookKey string, incomingAmount int64) (*domain.Donation, error)
+	CreateDonation(ctx context.Context, req domain.CreateDonationRequest, isTest bool) (*domain.Donation, error)
+	VerifyWebhookDonation(ctx context.Context, webhookKey string, incomingAmount int64, rawBody []byte, timestampHeader, signatureHeader string) (*domain.Donation, error)
 }
 
 type donationService struct {
@@ -21,6 +28,7 @@ type donationService struct {
 	userRepo     repository.UserRepository
 	projectRepo  repository.ProjectRepository
 	sseBroker    *SSEBroker
+	cfg          *config.Config
 }
 
 func NewDonationService(
@@ -28,16 +36,18 @@ func NewDonationService(
 	userRepo repository.UserRepository,
 	projectRepo repository.ProjectRepository,
 	sseBroker *SSEBroker,
+	cfg *config.Config,
 ) DonationService {
 	return &donationService{
 		donationRepo: donationRepo,
 		userRepo:     userRepo,
 		projectRepo:  projectRepo,
 		sseBroker:    sseBroker,
+		cfg:          cfg,
 	}
 }
 
-func (s *donationService) CreateDonation(ctx context.Context, req domain.CreateDonationRequest) (*domain.Donation, error) {
+func (s *donationService) CreateDonation(ctx context.Context, req domain.CreateDonationRequest, isTest bool) (*domain.Donation, error) {
 	if req.Amount < 5000 || req.Amount > 10000000 {
 		return nil, fmt.Errorf("donation amount must be between Rp 5.000 and Rp 10.000.000")
 	}
@@ -91,6 +101,7 @@ func (s *donationService) CreateDonation(ctx context.Context, req domain.CreateD
 		TotalAmount: totalAmount,
 		Message:     req.Message,
 		Status:      "pending",
+		IsTest:      isTest,
 	}
 
 	if err := s.donationRepo.Create(ctx, donation); err != nil {
@@ -100,10 +111,37 @@ func (s *donationService) CreateDonation(ctx context.Context, req domain.CreateD
 	return donation, nil
 }
 
-func (s *donationService) VerifyWebhookDonation(ctx context.Context, webhookKey string, incomingAmount int64) (*domain.Donation, error) {
+func (s *donationService) VerifyWebhookDonation(ctx context.Context, webhookKey string, incomingAmount int64, rawBody []byte, timestampHeader, signatureHeader string) (*domain.Donation, error) {
 	streamer, err := s.userRepo.FindByWebhookKey(ctx, webhookKey)
 	if err != nil {
 		return nil, fmt.Errorf("unauthorized: invalid webhook key")
+	}
+
+	// If HMAC verification is enabled on backend via .env
+	if s.cfg != nil && s.cfg.EnableWebhookHMAC {
+		if timestampHeader == "" || signatureHeader == "" {
+			return nil, fmt.Errorf("unauthorized: missing X-Suporter-Timestamp or X-Suporter-Signature header")
+		}
+
+		tsInt, err := strconv.ParseInt(timestampHeader, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("unauthorized: invalid timestamp format")
+		}
+
+		// 5-minute replay tolerance window (300 seconds)
+		now := time.Now().Unix()
+		if math.Abs(float64(now-tsInt)) > 300 {
+			return nil, fmt.Errorf("unauthorized: webhook request timestamp expired (tolerance window: 5 minutes)")
+		}
+
+		// Recompute expected HMAC-SHA256: HMAC(secret, timestamp + "." + rawBody)
+		mac := hmac.New(sha256.New, []byte(streamer.WebhookSecret))
+		mac.Write([]byte(timestampHeader + "." + string(rawBody)))
+		expectedSignature := hex.EncodeToString(mac.Sum(nil))
+
+		if subtle.ConstantTimeCompare([]byte(expectedSignature), []byte(signatureHeader)) != 1 {
+			return nil, fmt.Errorf("unauthorized: invalid HMAC signature")
+		}
 	}
 
 	donation, err := s.donationRepo.FindPendingByTotalAmount(ctx, streamer.ID, incomingAmount)

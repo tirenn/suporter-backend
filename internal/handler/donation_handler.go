@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"strings"
 
@@ -41,13 +43,17 @@ func (h *DonationHandler) CreateDonation(c *gin.Context) {
 		return
 	}
 
-	// Verify Google reCAPTCHA v2 token
-	if err := middleware.VerifyRecaptcha(h.recaptchaSecretKey, req.RecaptchaToken, c.ClientIP()); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Verifikasi CAPTCHA gagal: " + err.Error()})
-		return
+	isTest := strings.EqualFold(strings.TrimSpace(c.GetHeader("X-Is-Test")), "true")
+
+	// Verify Google reCAPTCHA v2 token only if not a test execution
+	if !isTest {
+		if err := middleware.VerifyRecaptcha(h.recaptchaSecretKey, req.RecaptchaToken, c.ClientIP()); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Verifikasi CAPTCHA gagal: " + err.Error()})
+			return
+		}
 	}
 
-	donation, err := h.donationService.CreateDonation(c.Request.Context(), req)
+	donation, err := h.donationService.CreateDonation(c.Request.Context(), req, isTest)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -76,13 +82,23 @@ func (h *DonationHandler) VerifyWebhookDonation(c *gin.Context) {
 		return
 	}
 
+	timestampHeader := strings.TrimSpace(c.GetHeader("X-Suporter-Timestamp"))
+	signatureHeader := strings.TrimSpace(c.GetHeader("X-Suporter-Signature"))
+
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	var req domain.WebhookDonationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: total amount is required"})
 		return
 	}
 
-	donation, err := h.donationService.VerifyWebhookDonation(c.Request.Context(), webhookKey, req.Amount)
+	donation, err := h.donationService.VerifyWebhookDonation(c.Request.Context(), webhookKey, req.Amount, bodyBytes, timestampHeader, signatureHeader)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

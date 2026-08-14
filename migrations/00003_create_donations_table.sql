@@ -8,12 +8,14 @@ CREATE TABLE IF NOT EXISTS donations (
     total_amount BIGINT NOT NULL,
     message TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    is_test BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_donations_total_amount ON donations(total_amount);
 CREATE INDEX IF NOT EXISTS idx_donations_status ON donations(status);
+CREATE INDEX IF NOT EXISTS idx_donations_is_test ON donations(is_test);
 
 -- +goose Down
 DROP TABLE IF EXISTS donations;

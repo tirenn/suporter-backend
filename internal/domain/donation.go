@@ -11,6 +11,7 @@ type Donation struct {
 	TotalAmount int64     `gorm:"index;not null" json:"total_amount" example:"50142"`
 	Message     string    `gorm:"type:text" json:"message" example:"Keep up the great stream!"`
 	Status      string    `gorm:"not null;type:varchar(20);default:'pending'" json:"status" example:"pending"`
+	IsTest      bool      `gorm:"not null;default:false" json:"is_test" example:"false"`
 	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }

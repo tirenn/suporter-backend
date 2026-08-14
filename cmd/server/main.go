@@ -114,7 +114,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, cfg)
 	projectService := service.NewProjectService(projectRepo, cfg)
 	sseBroker := service.NewSSEBroker()
-	donationService := service.NewDonationService(donationRepo, userRepo, projectRepo, sseBroker)
+	donationService := service.NewDonationService(donationRepo, userRepo, projectRepo, sseBroker, cfg)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService, cfg.RecaptchaSecretKey)
@@ -135,7 +135,7 @@ func main() {
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Suporter-Key, X-Suporter-Signature, X-Suporter-Timestamp, X-Is-Test")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusOK)
 			return
@@ -156,6 +156,7 @@ func main() {
 		{
 			authGroup.POST("/register", authHandler.Register)
 			authGroup.POST("/login", authHandler.Login)
+			authGroup.POST("/mobile-login", authHandler.MobileLogin)
 		}
 
 		// Public: Streamer profile lookup (for donation page)
@@ -168,7 +169,8 @@ func main() {
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(authService))
 		{
-			// Streamer profile update (QRIS URL)
+			// Streamer profile
+			protected.GET("/profile", authHandler.GetProfile)
 			protected.PUT("/profile", authHandler.UpdateProfile)
 			protected.PUT("/profile/webhook-key", authHandler.RegenerateWebhookKey)
 
