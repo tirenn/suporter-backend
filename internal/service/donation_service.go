@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	"suporter-backend/internal/config"
@@ -159,7 +160,23 @@ func (s *donationService) VerifyWebhookDonation(ctx context.Context, webhookKey 
 	if err == nil && len(projects) > 0 {
 		targetProject := projects[0]
 
-		formattedAmount := fmt.Sprintf("Rp %d", donation.TotalAmount)
+		// Format amount with thousands separator e.g. 50.000
+		nStr := fmt.Sprintf("%d", donation.TotalAmount)
+		var result []byte
+		for i, c := range nStr {
+			if i > 0 && (len(nStr)-i)%3 == 0 {
+				result = append(result, '.')
+			}
+			result = append(result, byte(c))
+		}
+		formattedAmount := string(result)
+
+		htmlTemplate := strings.TrimSpace(targetProject.HTMLTemplate)
+		cssStyle := strings.TrimSpace(targetProject.CSSStyle)
+		if htmlTemplate == "" {
+			htmlTemplate = defaultDonationHTML
+			cssStyle = defaultDonationCSS
+		}
 
 		alertPayload := map[string]string{
 			"name":    donation.SenderName,
@@ -167,15 +184,20 @@ func (s *donationService) VerifyWebhookDonation(ctx context.Context, webhookKey 
 			"message": donation.Message,
 		}
 
+		duration := targetProject.Duration
+		if duration <= 0 {
+			duration = 7000
+		}
+
 		alert := domain.Alert{
 			Name:         donation.SenderName,
 			Amount:       formattedAmount,
 			Message:      donation.Message,
 			Type:         "donation",
-			Duration:     targetProject.Duration,
+			Duration:     duration,
 			Timestamp:    time.Now().UnixMilli(),
-			HTMLTemplate: targetProject.HTMLTemplate,
-			CSSStyle:     targetProject.CSSStyle,
+			HTMLTemplate: htmlTemplate,
+			CSSStyle:     cssStyle,
 			Payload:      alertPayload,
 		}
 

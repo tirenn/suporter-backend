@@ -12,33 +12,39 @@ import (
 	"suporter-backend/internal/repository"
 )
 
-const defaultDonationHTML = `<div class="donation-alert-container">
-  <div class="donation-header">
-    <div class="coin-icon">💰</div>
-    <div class="alert-badge">SUPERCHAT DONATION</div>
+const defaultDonationHTML = `<div class="cartoon-alert-container">
+  <div class="cartoon-header">
+    <div class="cartoon-sparkle">💥</div>
+    <div class="cartoon-badge">Suporter datang!!!</div>
+    <div class="cartoon-sparkle">⚡</div>
   </div>
-  <div class="donation-amount">{{amount}}</div>
-  <div class="donation-donor">{{name}}</div>
-  <div class="donation-message-box">
-    <p class="donation-message">"{{message}}"</p>
+  <div class="cartoon-hero">
+    <span class="cartoon-name">{{name}}</span>
+    <span class="cartoon-action">mengirimkan</span>
+    <span class="cartoon-amount">Rp {{amount}}</span>
+  </div>
+  <div class="cartoon-message-bubble">
+    <p class="cartoon-message">{{message}}</p>
   </div>
 </div>`
 
-const defaultDonationCSS = `.donation-alert-container {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 20px;
-  padding: 28px;
-  max-width: 450px;
-  color: #ffffff;
-  font-family: 'Outfit', sans-serif;
+const defaultDonationCSS = `@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Nunito:wght@700;800;900&display=swap');
+
+.cartoon-alert-container {
+  background: linear-gradient(135deg, #FFF066 0%, #FFB800 50%, #FF8A00 100%);
+  border: 4px solid #1E293B;
+  border-radius: 24px;
+  padding: 24px 28px;
+  max-width: 480px;
+  box-shadow: 6px 8px 0px #0F172A, 0 20px 40px rgba(0, 0, 0, 0.25);
+  font-family: 'Fredoka', 'Nunito', sans-serif;
   text-align: center;
-  box-shadow: 0 20px 50px rgba(16, 185, 129, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(16px);
-  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  animation: cartoonPopIn 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.donation-header {
+.cartoon-header {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -46,60 +52,88 @@ const defaultDonationCSS = `.donation-alert-container {
   margin-bottom: 12px;
 }
 
-.coin-icon {
-  font-size: 1.5rem;
-  animation: bounce 1s infinite alternate;
-}
-
-.alert-badge {
-  background: rgba(0, 0, 0, 0.35);
-  padding: 4px 14px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: #a7f3d0;
-  text-transform: uppercase;
-}
-
-.donation-amount {
-  font-size: 2.8rem;
-  font-weight: 800;
-  color: #fef08a;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  letter-spacing: -0.02em;
-  margin-bottom: 4px;
-}
-
-.donation-donor {
+.cartoon-sparkle {
   font-size: 1.4rem;
-  font-weight: 700;
-  color: #ffffff;
+  animation: cartoonBounce 0.8s infinite alternate ease-in-out;
+}
+
+.cartoon-badge {
+  background: #FF4757;
+  color: #FFFFFF;
+  border: 3px solid #1E293B;
+  border-radius: 50px;
+  padding: 4px 18px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0px #1E293B;
+  transform: rotate(-1deg);
+}
+
+.cartoon-hero {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #1E293B;
+  line-height: 1.35;
   margin-bottom: 14px;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.6);
 }
 
-.donation-message-box {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px dashed rgba(255, 255, 255, 0.25);
+.cartoon-name {
+  color: #2E5BFF;
+  font-weight: 900;
+  text-decoration: underline wavy #FF4757;
+  padding: 0 4px;
+}
+
+.cartoon-action {
+  color: #1E293B;
+  font-weight: 700;
+  margin: 0 4px;
+}
+
+.cartoon-amount {
+  color: #059669;
+  background: #FFFFFF;
+  border: 2.5px solid #1E293B;
   border-radius: 12px;
-  padding: 12px 16px;
+  padding: 2px 10px;
+  font-weight: 900;
+  display: inline-block;
+  box-shadow: 2px 3px 0px #1E293B;
+  margin-left: 4px;
 }
 
-.donation-message {
-  font-size: 0.98rem;
-  font-style: italic;
-  line-height: 1.5;
-  color: #ecfdf5;
+.cartoon-message-bubble {
+  background: #FFFFFF;
+  border: 3.5px solid #1E293B;
+  border-radius: 18px;
+  padding: 12px 18px;
+  box-shadow: 4px 4px 0px #1E293B;
+  position: relative;
+  margin-top: 6px;
 }
 
-@keyframes popIn {
-  0% { transform: scale(0.6) translateY(30px); opacity: 0; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
+.cartoon-message {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1E293B;
+  line-height: 1.4;
+  margin: 0;
+  word-break: break-word;
 }
 
-@keyframes bounce {
-  from { transform: translateY(0); }
-  to { transform: translateY(-6px); }
+@keyframes cartoonPopIn {
+  0% { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+  70% { transform: scale(1.06) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes cartoonBounce {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-5px) scale(1.15); }
 }`
 
 type ProjectService interface {
@@ -130,16 +164,6 @@ func (s *projectService) CreateProject(ctx context.Context, userID uint64, req d
 
 	projectUUID := uuid.New()
 
-	htmlTemplate := strings.TrimSpace(req.HTMLTemplate)
-	cssStyle := strings.TrimSpace(req.CSSStyle)
-
-	if htmlTemplate == "" {
-		htmlTemplate = defaultDonationHTML
-	}
-	if cssStyle == "" {
-		cssStyle = defaultDonationCSS
-	}
-
 	duration := req.Duration
 	if duration <= 0 {
 		duration = 7000
@@ -151,8 +175,8 @@ func (s *projectService) CreateProject(ctx context.Context, userID uint64, req d
 		Name:         name,
 		Description:  strings.TrimSpace(req.Description),
 		EventType:    "donation",
-		HTMLTemplate: htmlTemplate,
-		CSSStyle:     cssStyle,
+		HTMLTemplate: strings.TrimSpace(req.HTMLTemplate),
+		CSSStyle:     strings.TrimSpace(req.CSSStyle),
 		Fields:       `["name","amount","message"]`,
 		Duration:     duration,
 	}
