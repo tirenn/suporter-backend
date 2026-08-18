@@ -50,7 +50,10 @@ func (h *OverlayHandler) ServeSSEStream(c *gin.Context) {
 		return
 	}
 
-	c.Writer.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
 	c.Writer.Header().Set("Pragma", "no-cache")
 	c.Writer.Header().Set("Expires", "0")
 
