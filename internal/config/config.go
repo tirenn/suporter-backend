@@ -19,6 +19,7 @@ type Config struct {
 	JWTExpiryHr        int    `mapstructure:"JWT_EXPIRY_HOURS"`
 	RecaptchaSecretKey string `mapstructure:"RECAPTCHA_SECRET_KEY"`
 	EnableWebhookHMAC  bool   `mapstructure:"ENABLE_WEBHOOK_HMAC"`
+	CORSAllowedOrigins string `mapstructure:"CORS_ALLOWED_ORIGINS"`
 }
 
 func Load() *Config {
@@ -37,6 +38,7 @@ func Load() *Config {
 	// Google reCAPTCHA v2 — replace with your real secret from console.cloud.google.com/recaptcha
 	viper.SetDefault("RECAPTCHA_SECRET_KEY", "6LeIxAcTAAAAAlO_PuGNMaximum-T6Nmcca_WDm")
 	viper.SetDefault("ENABLE_WEBHOOK_HMAC", true)
+	viper.SetDefault("CORS_ALLOWED_ORIGINS", "*")
 
 	viper.AutomaticEnv()
 

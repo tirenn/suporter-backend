@@ -131,17 +131,8 @@ func main() {
 	r := gin.Default()
 	_ = r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
-	// CORS Middleware
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Suporter-Key, X-Suporter-Signature, X-Suporter-Timestamp, X-Is-Test")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusOK)
-			return
-		}
-		c.Next()
-	})
+	// CORS Middleware (Environment configurable with safe OBS overlay bypass)
+	r.Use(middleware.CORSMiddleware(cfg.CORSAllowedOrigins))
 
 	// Swagger API Docs Route
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -195,11 +186,21 @@ func main() {
 	r.StaticFile("/overlay.css", filepath.Join(staticDir, "overlay.css"))
 	r.StaticFile("/overlay.js", filepath.Join(staticDir, "overlay.js"))
 
+	// Health Check / API Status Routes
 	r.GET("/", func(c *gin.Context) {
-		c.File(filepath.Join(staticDir, "dashboard.html"))
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "online",
+			"service":   "Suporter API",
+			"version":   "1.0.0",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"docs":      "/swagger/index.html",
+		})
 	})
-	r.GET("/dashboard", func(c *gin.Context) {
-		c.File(filepath.Join(staticDir, "dashboard.html"))
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "healthy",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		})
 	})
 
 	// Server instance setup
