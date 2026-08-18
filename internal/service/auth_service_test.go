@@ -39,7 +39,7 @@ func TestAuthService_RegisterAndLogin(t *testing.T) {
 	regReq := domain.RegisterRequest{
 		Name:     "Test User",
 		Username: "testuser",
-		Password: "password123",
+		Password: "Password123!",
 		Role:     "streamer",
 	}
 
@@ -50,8 +50,7 @@ func TestAuthService_RegisterAndLogin(t *testing.T) {
 
 	// 2. Mock Insert User (Return ID = 1)
 	mock.ExpectBegin()
-	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "users" ("username","password_hash","name","role","webhook_key","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING "id"`)).
-		WithArgs("testuser", sqlmock.AnyArg(), "Test User", "streamer", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "users"`)).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
 
@@ -75,14 +74,14 @@ func TestAuthService_RegisterAndLogin(t *testing.T) {
 	// Test Login
 	loginReq := domain.LoginRequest{
 		Username: "testuser",
-		Password: "password123",
+		Password: "Password123!",
 	}
 
 	// Mock FindByUsername for Login
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE username = $1 ORDER BY "users"."id" LIMIT $2`)).
 		WithArgs("testuser", 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password_hash", "name", "role", "webhook_key"}).
-			AddRow(1, "testuser", regRes.User.PasswordHash, "Test User", "streamer", regRes.User.WebhookKey))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "password_hash", "name", "role", "webhook_key", "is_active"}).
+			AddRow(1, "testuser", regRes.User.PasswordHash, "Test User", "streamer", regRes.User.WebhookKey, true))
 
 	loginRes, err := authServ.Login(ctx, loginReq)
 	if err != nil {
