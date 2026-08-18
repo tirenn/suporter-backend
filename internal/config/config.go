@@ -20,6 +20,7 @@ type Config struct {
 	RecaptchaSecretKey string `mapstructure:"RECAPTCHA_SECRET_KEY"`
 	EnableWebhookHMAC  bool   `mapstructure:"ENABLE_WEBHOOK_HMAC"`
 	CORSAllowedOrigins string `mapstructure:"CORS_ALLOWED_ORIGINS"`
+	AppURL             string `mapstructure:"APP_URL"`
 }
 
 func Load() *Config {
@@ -28,6 +29,7 @@ func Load() *Config {
 
 	// Set fallback defaults
 	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("APP_URL", "http://localhost:8080")
 	viper.SetDefault("DB_HOST", "localhost")
 	viper.SetDefault("DB_PORT", "5432")
 	viper.SetDefault("DB_USER", "postgres")

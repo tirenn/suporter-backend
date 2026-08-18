@@ -263,5 +263,9 @@ func (s *projectService) ensureDefaultTemplate(p *domain.Project) {
 }
 
 func (s *projectService) populateOBSUrl(p *domain.Project) {
-	p.OBSUrl = fmt.Sprintf("http://localhost:%s/overlay/%s", s.cfg.Port, p.UUID.String())
+	appURL := strings.TrimRight(s.cfg.AppURL, "/")
+	if appURL == "" {
+		appURL = fmt.Sprintf("http://localhost:%s", s.cfg.Port)
+	}
+	p.OBSUrl = fmt.Sprintf("%s/overlay/%s", appURL, p.UUID.String())
 }
