@@ -1,0 +1,7 @@
+.git
+.gitignore
+.env
+.DS_Store
+*.exe
+*.test
+__debug_bin*
