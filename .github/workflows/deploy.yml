@@ -45,18 +45,21 @@ jobs:
 
       - name: Deploy via SSH to VPS
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          BACKEND_ENV: ${{ secrets.SUPORTER_BACKEND_ENV }}
         with:
           host: ${{ secrets.SUPORTER_SSH_HOST }}
           username: ${{ secrets.SUPORTER_SSH_USER }}
           key: ${{ secrets.SUPORTER_SSH_KEY }}
           port: ${{ secrets.SUPORTER_SSH_PORT || 22 }}
+          envs: BACKEND_ENV
           script: |
             set -e
             echo "🚀 Starting Suporter Backend deployment on VPS..."
 
             TARGET_DIR="/var/www/suporter-backend"
-            mkdir -p $TARGET_DIR
-            cd $TARGET_DIR
+            mkdir -p "$TARGET_DIR"
+            cd "$TARGET_DIR"
 
             # Clone if not present, otherwise pull latest changes
             if [ ! -d ".git" ]; then
@@ -69,11 +72,9 @@ jobs:
             fi
 
             # Inject .env secrets if provided
-            if [ -n "${{ secrets.SUPORTER_BACKEND_ENV }}" ]; then
+            if [ -n "$BACKEND_ENV" ]; then
               echo "Configuring .env..."
-              cat << 'EOF' > .env
-${{ secrets.SUPORTER_BACKEND_ENV }}
-EOF
+              printf '%s\n' "$BACKEND_ENV" > .env
             fi
 
             # Build and launch Backend Docker container
