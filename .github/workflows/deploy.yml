@@ -47,12 +47,13 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           BACKEND_ENV: ${{ secrets.SUPORTER_BACKEND_ENV }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.SUPORTER_SSH_HOST }}
           username: ${{ secrets.SUPORTER_SSH_USER }}
           key: ${{ secrets.SUPORTER_SSH_KEY }}
           port: ${{ secrets.SUPORTER_SSH_PORT || 22 }}
-          envs: BACKEND_ENV
+          envs: BACKEND_ENV,GH_TOKEN
           script: |
             set -e
             echo "🚀 Starting Suporter Backend deployment on VPS..."
@@ -61,12 +62,15 @@ jobs:
             mkdir -p "$TARGET_DIR"
             cd "$TARGET_DIR"
 
+            REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+
             # Clone if not present, otherwise pull latest changes
             if [ ! -d ".git" ]; then
               echo "Cloning repository..."
-              git clone https://github.com/${{ github.repository }}.git .
+              git clone "$REPO_URL" .
             else
               echo "Pulling latest code from ${{ github.ref_name }}..."
+              git remote set-url origin "$REPO_URL"
               git fetch origin
               git reset --hard origin/${{ github.ref_name }}
             fi
