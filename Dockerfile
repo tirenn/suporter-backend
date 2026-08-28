@@ -22,9 +22,10 @@ WORKDIR /app
 # Install runtime dependencies (certificates and timezone data)
 RUN apk add --no-cache ca-certificates tzdata
 
-# Copy binary and static assets from builder
+# Copy binary, static assets, and SQL migrations from builder
 COPY --from=builder /app/server .
 COPY static/ ./static/
+COPY migrations/ ./migrations/
 
 # Environment defaults
 ENV PORT=8080
