@@ -3,7 +3,8 @@ name: "Deploy Backend to VPS on Tag"
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
 concurrency:
   group: "backend-production-deploy"
