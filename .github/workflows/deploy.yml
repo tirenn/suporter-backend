@@ -102,9 +102,9 @@ jobs:
             # 5. Ensure shared network tirenn-net exists
             docker network create tirenn-net 2>/dev/null || true
 
-            # 6. Build the latest backend Docker image
+            # 6. Build the latest backend Docker image (using layer cache for speed)
             echo "Building latest backend Docker image..."
-            docker compose build --no-cache
+            docker compose build --pull
 
             # 7. Run database migrations explicitly using the new image
             echo "Executing database migrations UP against PostgreSQL..."
