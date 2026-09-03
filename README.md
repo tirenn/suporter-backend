@@ -11,32 +11,51 @@ The Golang backend application powering real-time OBS Studio Browser Source over
 - **ORM**: [GORM](https://gorm.io/) with PostgreSQL driver
 - **Database**: PostgreSQL 14+
 - **Migrations**: [Goose](https://github.com/pressly/goose/v3)
-- **Configuration**: [Viper](https://github.com/spf13/viper) (`.env` file)
+- **Configuration & Secrets**: [Doppler](https://www.doppler.com/) / [Viper](https://github.com/spf13/viper)
 - **API Documentation**: [Swag / Swagger UI](https://github.com/swaggo/swag)
 
 ---
 
-## ⚙️ Environment Configuration (`.env`)
+## 🔐 Doppler Setup (Backend Service)
 
-```env
-PORT=8080
+1. Create a project named **`suporter-backend`** on [Doppler](https://doppler.com).
+2. Import secrets from [`.env.example`](file:///c:/Users/Ryzen/Documents/Projects/suporter/backend/.env.example).
+3. Setup and link locally:
+```bash
+doppler login
+doppler setup --project suporter-backend --config dev
+```
+4. Run locally with Doppler:
+```bash
+# Run server
+doppler run -- make run
 
-# PostgreSQL Settings
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=suporter
-DB_SSLMODE=disable
+# Run tests
+doppler run -- make test
 
-# JWT Security
-JWT_SECRET=suporter-super-secret-jwt-key-2026
-JWT_EXPIRY_HOURS=24
+# Run migrations
+doppler run -- make migrate-up
 ```
 
 ---
 
-## 🚀 Quick Execution Commands
+## 🤖 GitHub Actions CI/CD for Backend Repo
+
+If this backend repository is hosted independently:
+- **`ci.yml`**: Runs `1. Build Binary` ➔ `2. Unit Tests` on every PR and merge to `main`.
+- **`deploy.yml`**: Runs `1. Build Binary` ➔ `2. Unit Tests` ➔ `3. Deploy to VPS on Tag` (`git tag v1.0.0 && git push origin v1.0.0`), retrieves secrets via Doppler, connects to your VPS over SSH, and restarts the backend container.
+
+### Required GitHub Secrets for Backend:
+- `DOPPLER_TOKEN`: Doppler Service Token for `suporter-backend` (Production config).
+- `SSH_HOST`: VPS IP address / hostname.
+- `SSH_USER`: SSH username on VPS (e.g. `root`).
+- `SSH_KEY`: SSH private key.
+- `SSH_PORT`: *(optional, default 22)*.
+- `TARGET_DIR`: `/root/Projects/suporter-backend`.
+
+---
+
+## 🚀 Quick Execution Commands (Makefile)
 
 ```bash
 # 1. Run migrations
@@ -51,15 +70,3 @@ make run
 # 4. Run tests
 make test
 ```
-
----
-
-## 📚 Key Endpoints
-
-- **Swagger UI**: `GET http://localhost:8080/swagger/index.html`
-- **Dashboard**: `GET http://localhost:8080/dashboard`
-- **Register**: `POST /api/v1/auth/register`
-- **Login**: `POST /api/v1/auth/login`
-- **Create Project**: `POST /api/v1/projects`
-- **OBS Overlay Widget**: `GET /overlay/:project_id`
-- **Trigger Alert**: `POST /api/v1/projects/:project_id/alert`
