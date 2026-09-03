@@ -104,15 +104,15 @@ jobs:
 
             # 6. Build the latest backend Docker image
             echo "Building latest backend Docker image..."
-            docker compose build
+            docker compose build --no-cache
 
             # 7. Run database migrations explicitly using the new image
             echo "Executing database migrations UP against PostgreSQL..."
             docker compose run --rm backend ./server -migrate-up
 
-            # 8. Restart Backend Docker container
+            # 8. Force recreate and restart Backend Docker container
             echo "Starting Backend service..."
-            docker compose up -d --remove-orphans
+            docker compose up -d --force-recreate --remove-orphans
 
             # 9. Verify container status and output startup logs
             echo "Checking container status..."
@@ -121,9 +121,10 @@ jobs:
             echo "Recent server logs:"
             docker logs suporter-backend --tail 20
             
-            # 10. Clean up unused images
-            echo "Cleaning up dangling docker images..."
-            docker image prune -f || true
+            # 10. Clean up unused images and old build layers
+            echo "Cleaning up unused Docker images and build cache..."
+            docker image prune -a -f --filter "until=24h" 2>/dev/null || docker image prune -f
+            docker builder prune -f --filter "until=24h" 2>/dev/null || true
 
             echo "=========================================================="
             echo "✅ Backend Deployment & Migrations for $RELEASE_TAG Completed Successfully!"
