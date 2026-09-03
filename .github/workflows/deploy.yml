@@ -98,23 +98,26 @@ jobs:
               fi
             fi
 
-            # 5. Build and start backend container using Docker Compose
+            # 5. Ensure shared network tirenn-net exists
+            docker network create tirenn-net 2>/dev/null || true
+
+            # 6. Build and start backend container using Docker Compose
             echo "Building and restarting Backend Docker services..."
             docker compose down --remove-orphans || true
             docker compose up -d --build --remove-orphans
 
-            # 6. Wait for database and services to become healthy
-            echo "Waiting for services to become healthy..."
-            sleep 8
+            # 7. Wait for backend service to initialize
+            echo "Waiting for backend service to become ready..."
+            sleep 6
 
-            # 7. Run database migrations
-            echo "Executing database migrations..."
+            # 8. Run database migrations
+            echo "Executing database migrations against shared PostgreSQL..."
             docker compose exec -T backend ./server -migrate-up || echo "Migration step completed."
 
-            # 8. Check running containers
+            # 9. Check running containers
             docker compose ps
             
-            # 9. Clean up unused images
+            # 10. Clean up unused images
             echo "Cleaning up dangling docker images..."
             docker image prune -f || true
 
